@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Gestión de Configuración</h1>
+
+<form method="POST" class="needs-validation" novalidate>
+    <div class="mb-3">
+        <label for="gemini_api_key" class="form-label">API Key de Gemini:</label>
+        <input type="password" id="gemini_api_key" name="gemini_api_key" value="{{ config.gemini_api_key if config.gemini_api_key else '' }}" class="form-control" placeholder="Ingresa tu API Key de Gemini" required>
+        <div class="invalid-feedback">
+            Por favor, introduce la API Key de Gemini.
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="github_token" class="form-label">Token de GitHub:</label>
+        <input type="password" id="github_token" name="github_token" value="{{ config.github_token if config.github_token else '' }}" class="form-control" placeholder="Ingresa tu Token de GitHub" required>
+        <div class="invalid-feedback">
+            Por favor, introduce el Token de GitHub.
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar Configuración</button>
+</form>
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Volver al Dashboard</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Bootstrap form validation
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ title }}</h1>
+
+<form method="POST">
+    {% if not tool.filename %}
+        <div class="mb-3">
+            <label for="filename" class="form-label">Nombre del Archivo (ej. mi_herramienta.py):</label>
+            <input type="text" id="filename" name="filename" class="form-control" placeholder="ej. mi_herramienta.py" required>
+        </div>
+    {% else %}
+        <p class="mb-3"><strong>Archivo:</strong> {{ tool.filename }}</p>
+        <input type="hidden" name="filename" value="{{ tool.filename }}">
+    {% endif %}
+
+    <div class="mb-3">
+        <label for="content" class="form-label">Contenido del Archivo:</label>
+        <textarea id="content" name="content" class="form-control" rows="15" placeholder="Escribe el código de tu herramienta aquí..." required>{{ tool.content }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar</button>
+</form>
+
+<a href="{{ url_for('mcp_manager') }}" class="btn btn-secondary mt-3">Volver a la Gestión de Herramientas</a>
+{% endblock %}

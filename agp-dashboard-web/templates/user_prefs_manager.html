@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Preferencias de Usuario - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Gestión de Preferencias de Usuario</h1>
+
+<form method="POST">
+    {% if user_prefs_info %}
+        {% for key, value in user_prefs_info.items() %}
+            <div class="mb-3">
+                <label for="{{ key }}" class="form-label">{{ key.replace('_', ' ').title() }}:</label>
+                <input type="text" id="{{ key }}" name="{{ key }}" value="{{ value }}" class="form-control">
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-muted">No hay preferencias de usuario guardadas. Puedes añadir nuevas a continuación.</p>
+    {% endif %}
+    
+    <p class="mt-4">Para añadir una nueva preferencia, simplemente escribe el nombre y el valor en los campos de abajo y guarda.</p>
+    <div class="mb-3">
+        <label for="new_pref_name" class="form-label">Nueva Preferencia (Nombre):</label>
+        <input type="text" id="new_pref_name" name="new_pref_name" placeholder="Ej: color_favorito" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="new_pref_value" class="form-label">Nueva Preferencia (Valor):</label>
+        <input type="text" id="new_pref_value" name="new_pref_value" placeholder="Ej: azul" class="form-control" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar Preferencias</button>
+</form>
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Volver al Dashboard</a>
+{% endblock %}
