@@ -15,10 +15,15 @@ import uuid
 from datetime import datetime
 from collections import Counter
 import time
+import logging
 
 # --- Configuración de la Aplicación ---
 app = Flask(__name__)
 socketio = SocketIO(app)
+
+# Configuración del logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+app.logger.setLevel(logging.INFO)
 
 @app.before_request
 def before_request():
@@ -28,7 +33,7 @@ def before_request():
 # Configuración de la SECRET_KEY (Más Segura)
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
-    print("ADVERTENCIA: La SECRET_KEY no está configurada. Usando una clave temporal.", file=sys.stderr)
+    app.logger.warning("ADVERTENCIA: La SECRET_KEY no está configurada. Usando una clave temporal.")
     SECRET_KEY = os.urandom(24).hex()
 app.config['SECRET_KEY'] = SECRET_KEY
 
@@ -86,9 +91,13 @@ def _load_json(file_path, default_value=None):
         return default_value if default_value is not None else {}
 
 def _save_json(file_path, data):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4)
+    try:
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+    except (IOError, OSError) as e:
+        app.logger.error(f"Error al guardar el archivo JSON {file_path}: {e}")
+        raise # Re-lanzar la excepción para que la función que llama pueda manejarla
 
 # --- Funciones de Carga y Guardado de Datos ---
 def _load_users():
@@ -127,14 +136,24 @@ def _read_mcp_file(filename):
 
 def _write_mcp_file(filename, content):
     file_path = os.path.join(CUSTOM_TOOLS_DIR, filename)
-    os.makedirs(CUSTOM_TOOLS_DIR, exist_ok=True)
-    with open(file_path, "w") as f:
-        f.write(content)
+    try:
+        os.makedirs(CUSTOM_TOOLS_DIR, exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(content)
+    except (IOError, OSError) as e:
+        app.logger.error(f"Error al escribir el archivo MCP {file_path}: {e}")
+        raise
 
 def _delete_mcp_file(filename):
     file_path = os.path.join(CUSTOM_TOOLS_DIR, filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        else:
+            app.logger.warning(f"Intento de eliminar MCP que no existe: {file_path}")
+    except OSError as e:
+        app.logger.error(f"Error al eliminar el archivo MCP {file_path}: {e}")
+        raise
 
 def _load_command_history():
     return _load_json(COMMAND_HISTORY_FILE, [])
@@ -166,9 +185,13 @@ def _send_to_gemini_api(chat_history):
     }
     # Usar la URL de la API de Gemini para chat
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
-    response = requests.post(url, headers=headers, json=data)
-    response.raise_for_status() # Lanza una excepción para códigos de estado de error
-    return response.json()['candidates'][0]['content']['parts'][0]['text']
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status() # Lanza una excepción para códigos de estado de error
+        return response.json()['candidates'][0]['content']['parts'][0]['text']
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Error de red o API al comunicarse con Gemini: {e}")
+        raise # Re-lanzar la excepción para que la función que llama pueda manejarla
 
 def _cargar_proyectos():
     return _load_json(PROYECTOS_FILE, [])
@@ -291,9 +314,13 @@ def mcp_add():
         content = request.form['content']
         if not filename.endswith('.py'):
             filename += '.py'
-        _write_mcp_file(filename, content)
-        flash(f'Herramienta personalizada {filename} guardada correctamente.', 'success')
-        return redirect(url_for('mcp_manager'))
+        try:
+            _write_mcp_file(filename, content)
+            flash(f'Herramienta personalizada {filename} guardada correctamente.', 'success')
+            return redirect(url_for('mcp_manager'))
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al añadir MCP {filename}: {e}")
+            flash(f'Error al guardar la herramienta personalizada {filename}. Por favor, inténtalo de nuevo.', 'danger')
     return render_template('mcp_form.html', title='Añadir Nueva Herramienta Personalizada', tool={'filename': '', 'content': ''})
 
 @app.route('/mcp_edit/<filename>', methods=['GET', 'POST'])
@@ -301,21 +328,31 @@ def mcp_add():
 def mcp_edit(filename):
     if request.method == 'POST':
         content = request.form['content']
-        _write_mcp_file(filename, content)
-        flash(f'Herramienta personalizada {filename} actualizada correctamente.', 'success')
-        return redirect(url_for('mcp_manager'))
+        try:
+            _write_mcp_file(filename, content)
+            flash(f'Herramienta personalizada {filename} actualizada correctamente.', 'success')
+            return redirect(url_for('mcp_manager'))
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al editar MCP {filename}: {e}")
+            flash(f'Error al actualizar la herramienta personalizada {filename}. Por favor, inténtalo de nuevo.', 'danger')
     
     content = _read_mcp_file(filename)
     if content is None:
-        return "Herramienta personalizada no encontrada", 404
+        app.logger.warning(f"Intento de editar MCP no encontrado: {filename}")
+        flash('Herramienta personalizada no encontrada.', 'danger')
+        return redirect(url_for('mcp_manager'))
     
     return render_template('mcp_form.html', title=f'Editar {filename}', tool={'filename': filename, 'content': content})
 
 @app.route('/mcp_delete/<filename>')
 
 def mcp_delete(filename):
-    _delete_mcp_file(filename)
-    flash(f'Herramienta personalizada {filename} eliminada correctamente.', 'success')
+    try:
+        _delete_mcp_file(filename)
+        flash(f'Herramienta personalizada {filename} eliminada correctamente.', 'success')
+    except OSError as e:
+        app.logger.error(f"Error al eliminar MCP {filename}: {e}")
+        flash(f'Error al eliminar la herramienta personalizada {filename}. Por favor, inténtalo de nuevo.', 'danger')
     return redirect(url_for('mcp_manager'))
 
 @app.route('/tasks_manager')
@@ -344,9 +381,13 @@ def task_add():
         }
         
         tareas.append(nueva_tarea)
-        _guardar_tareas(tareas)
-        flash('Tarea añadida correctamente.', 'success')
-        return redirect(url_for('tasks_manager'))
+        try:
+            _guardar_tareas(tareas)
+            flash('Tarea añadida correctamente.', 'success')
+            return redirect(url_for('tasks_manager'))
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al añadir tarea: {e}")
+            flash('Error al añadir la tarea. Por favor, inténtalo de nuevo.', 'danger')
     return render_template('task_form.html', title='Añadir Nueva Tarea', task={'descripcion': '', 'estado': 'pendiente'})
 
 @app.route('/task_edit/<task_id>', methods=['GET', 'POST'])
@@ -362,9 +403,13 @@ def task_edit(task_id):
         task_to_edit['descripcion'] = request.form['descripcion']
         task_to_edit['estado'] = request.form['estado']
         task_to_edit['fecha_modificacion'] = datetime.now().isoformat()
-        _guardar_tareas(tareas)
-        flash('Tarea actualizada correctamente.', 'success')
-        return redirect(url_for('tasks_manager'))
+        try:
+            _guardar_tareas(tareas)
+            flash('Tarea actualizada correctamente.', 'success')
+            return redirect(url_for('tasks_manager'))
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al actualizar tarea {task_id}: {e}")
+            flash('Error al actualizar la tarea. Por favor, inténtalo de nuevo.', 'danger')
     
     return render_template('task_form.html', title=f'Editar Tarea', task=task_to_edit, task_id=task_id)
 
@@ -377,8 +422,12 @@ def task_delete(task_id):
     if len(tareas) == len(tareas_filtradas):
         flash('Tarea no encontrada.', 'error')
     else:
-        _guardar_tareas(tareas_filtradas)
-        flash('Tarea eliminada correctamente.', 'success')
+        try:
+            _guardar_tareas(tareas_filtradas)
+            flash('Tarea eliminada correctamente.', 'success')
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al eliminar tarea {task_id}: {e}")
+            flash('Error al eliminar la tarea. Por favor, inténtalo de nuevo.', 'danger')
         
     return redirect(url_for('tasks_manager'))
 
@@ -389,9 +438,13 @@ def config_manager():
     if request.method == 'POST':
         config['gemini_api_key'] = request.form['gemini_api_key']
         config['github_token'] = request.form['github_token']
-        _guardar_config(config)
-        flash('Configuración guardada correctamente.', 'success')
-        return redirect(url_for('config_manager'))
+        try:
+            _guardar_config(config)
+            flash('Configuración guardada correctamente.', 'success')
+            return redirect(url_for('config_manager'))
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al guardar la configuración: {e}")
+            flash('Error al guardar la configuración. Por favor, inténtalo de nuevo.', 'danger')
     return render_template('config_manager.html', config=config)
 
 @app.route('/user_prefs_manager', methods=['GET', 'POST'])
@@ -404,9 +457,13 @@ def user_prefs_manager():
         for key, value in request.form.items():
             preferencias[key] = value
         context_memory["preferencias"] = preferencias
-        _guardar_context_memory(context_memory)
-        flash('Preferencias de usuario guardadas correctamente.', 'success')
-        return redirect(url_for('user_prefs_manager'))
+        try:
+            _guardar_context_memory(context_memory)
+            flash('Preferencias de usuario guardadas correctamente.', 'success')
+            return redirect(url_for('user_prefs_manager'))
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al guardar las preferencias de usuario: {e}")
+            flash('Error al guardar las preferencias de usuario. Por favor, inténtalo de nuevo.', 'danger')
     
     user_prefs_info = context_memory.get("preferencias", {})
     return render_template('user_prefs_manager.html', user_prefs_info=user_prefs_info)
@@ -519,9 +576,13 @@ def project_credentials_manager():
         # Actualizar todas las credenciales enviadas en el formulario
         for key, value in request.form.items():
             credentials[key] = value
-        _save_project_credentials(credentials)
-        flash('Credenciales del proyecto guardadas correctamente.', 'success')
-        return redirect(url_for('project_credentials_manager'))
+        try:
+            _save_project_credentials(credentials)
+            flash('Credenciales del proyecto guardadas correctamente.', 'success')
+            return redirect(url_for('project_credentials_manager'))
+        except (IOError, OSError) as e:
+            app.logger.error(f"Error al guardar las credenciales del proyecto: {e}")
+            flash('Error al guardar las credenciales del proyecto. Por favor, inténtalo de nuevo.', 'danger')
     return render_template('project_credentials_manager.html', credentials=credentials)
 
 @app.route('/terminal')
@@ -694,13 +755,13 @@ def _read_and_forward_output(sid, fd):
                 output = os.read(fd, 1024).decode('utf-8', errors='ignore')
                 socketio.emit('output', {'output': output}, room=sid)
         except Exception as e:
-            print(f"Error reading from PTY for SID {sid}: {e}")
+            app.logger.error(f"Error reading from PTY for SID {sid}: {e}")
             break
 
 @socketio.on('connect')
 def handle_connect():
     sid = request.sid
-    print(f"Client connected: {sid}")
+    app.logger.info(f"Client connected: {sid}")
     master_fd, slave_fd = pty.openpty()
     p = subprocess.Popen(['bash'], stdin=slave_fd, stdout=slave_fd, stderr=slave_fd, preexec_fn=os.setsid)
     terminals[sid] = {'process': p, 'master_fd': master_fd}
@@ -710,11 +771,12 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect(sid):
     sid = request.sid
-    print(f"Client disconnected: {sid}")
+    app.logger.info(f"Client disconnected: {sid}")
     if sid in terminals:
         terminals[sid]['process'].terminate()
         os.close(terminals[sid]['master_fd'])
         del terminals[sid]
+
 
 @socketio.on('input')
 def handle_input(data):
