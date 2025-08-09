@@ -16,6 +16,7 @@ from datetime import datetime
 from collections import Counter
 import time
 import logging
+from flask_sqlalchemy import SQLAlchemy
 
 # --- Configuración de la Aplicación ---
 app = Flask(__name__)
@@ -36,6 +37,11 @@ if not SECRET_KEY:
     app.logger.warning("ADVERTENCIA: La SECRET_KEY no está configurada. Usando una clave temporal.")
     SECRET_KEY = os.urandom(24).hex()
 app.config['SECRET_KEY'] = SECRET_KEY
+
+# Configuración de la base de datos
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
 # Diccionario para almacenar procesos de terminal
 terminals = {}
@@ -61,26 +67,23 @@ CUSTOM_TOOLS_DIR = os.path.join(AGP_CLI_DIR, "custom_tools")
 PROJECT_CREDENTIALS_FILE = os.path.join(AGP_CLI_DIR, "project_credentials.json")
 PROYECTOS_FILE = os.path.join(GEMINI_DIR, "aprendizaje", "proyectos.json")
 COMMAND_HISTORY_FILE = os.path.join(DASHBOARD_DIR, "command_history.json")
-USERS_FILE = os.path.join(DASHBOARD_DIR, "users.json")
+# USERS_FILE = os.path.join(DASHBOARD_DIR, "users.json") # Ya no se usa con la base de datos
 ENV_DIR = os.path.join(HOME_DIR, ".virtualenvs")
 
-# --- Modelo de Usuario para Flask-Login ---
-class User(UserMixin):
-    def __init__(self, id):
-        self.id = id
+# --- Modelo de Usuario para Flask-Login con SQLAlchemy ---
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(20), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
 
-    @staticmethod
-    def get(user_id):
-        users = _load_users()
-        if user_id in users:
-            return User(user_id)
-        return None
+    def __repr__(self):
+        return f"User('{self.username}')"
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    return User.query.get(int(user_id))
 
-# --- Funciones Genéricas para JSON ---
+# --- Funciones Genéricas para JSON (mantener para otros archivos JSON) ---
 def _load_json(file_path, default_value=None):
     if not os.path.exists(file_path):
         return default_value if default_value is not None else {}
@@ -99,9 +102,38 @@ def _save_json(file_path, data):
         app.logger.error(f"Error al guardar el archivo JSON {file_path}: {e}")
         raise # Re-lanzar la excepción para que la función que llama pueda manejarla
 
-# --- Funciones de Carga y Guardado de Datos ---
-def _load_users():
-    return _load_json(USERS_FILE, {})
+# --- Funciones de Carga y Guardado de Datos (actualizadas) ---
+# _load_users() y _save_users() ya no son necesarias con la base de datos
+
+def _migrate_users_from_json():
+    users_file_path = os.path.join(DASHBOARD_DIR, "users.json")
+    if os.path.exists(users_file_path):
+        app.logger.info("Iniciando migración de usuarios desde users.json...")
+        try:
+            with open(users_file_path, 'r', encoding='utf-8') as f:
+                json_users = json.load(f)
+
+            for username, user_data in json_users.items():
+                # Verificar si el usuario ya existe en la base de datos
+                existing_user = User.query.filter_by(username=username).first()
+                if not existing_user:
+                    new_user = User(username=username, password_hash=user_data['password_hash'])
+                    db.session.add(new_user)
+                    app.logger.info(f"Usuario '{username}' migrado.")
+                else:
+                    app.logger.info(f"Usuario '{username}' ya existe en la base de datos, omitiendo.")
+            db.session.commit()
+            app.logger.info("Migración de usuarios completada.")
+            # Eliminar el archivo users.json después de la migración exitosa
+            os.remove(users_file_path)
+            app.logger.info(f"Archivo {users_file_path} eliminado.")
+        except json.JSONDecodeError:
+            app.logger.error("Error al decodificar users.json. Archivo corrupto o vacío.")
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error durante la migración de usuarios: {e}")
+    else:
+        app.logger.info("users.json no encontrado. No se requiere migración de usuarios.")
 
 def _cargar_config():
     return _load_json(CONFIG_FILE)
@@ -211,11 +243,10 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        users = _load_users()
-        user_data = users.get(username)
+        user_data = User.query.filter_by(username=username).first()
 
-        if user_data and check_password_hash(user_data['password_hash'], password):
-            user = User(username)
+        if user_data and check_password_hash(user_data.password_hash, password):
+            user = User.query.get(user_data.id)
             login_user(user)
             flash('Has iniciado sesión correctamente.', 'success')
             return redirect(url_for('dashboard'))
@@ -233,13 +264,13 @@ def register():
         username = request.form['username']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
-        users = _load_users()
 
         if not username or not password or not confirm_password:
             flash('Todos los campos son obligatorios.', 'danger')
             return render_template('register.html')
 
-        if username in users:
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
             flash('El nombre de usuario ya existe.', 'danger')
             return render_template('register.html')
 
@@ -248,8 +279,9 @@ def register():
             return render_template('register.html')
 
         hashed_password = generate_password_hash(password)
-        users[username] = {'password_hash': hashed_password}
-        _save_json(USERS_FILE, users)
+        new_user = User(username=username, password_hash=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
         flash('Registro exitoso. Por favor, inicia sesión.', 'success')
         return redirect(url_for('login'))
 
