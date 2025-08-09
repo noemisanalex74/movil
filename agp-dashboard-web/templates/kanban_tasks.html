@@ -162,11 +162,56 @@
         });
     });
 
-    // SocketIO for real-time updates (if needed for other features)
+    // SocketIO for real-time updates
     socket.on('task_status_updated', function(data) {
-        // Example: show a flash message or update UI if needed
-        console.log(`Task ${data.description} updated to ${data.new_status}`);
-        // You might want to add a visual notification here
+        const toastContainer = document.querySelector('.toast-container');
+        let statusText = '';
+        let category = 'info';
+
+        switch(data.new_status) {
+            case 'pendiente':
+                statusText = 'pendiente';
+                category = 'warning';
+                break;
+            case 'en_progreso':
+                statusText = 'en progreso';
+                category = 'primary';
+                break;
+            case 'completada':
+                statusText = 'completada';
+                category = 'success';
+                break;
+            default:
+                statusText = data.new_status;
+                category = 'info';
+        }
+
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${category} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        Tarea "${data.description}" actualizada a ${statusText}.
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        const toastElement = document.createRange().createContextualFragment(toastHtml);
+        toastContainer.append(toastElement);
+        const toast = new bootstrap.Toast(toastContainer.lastElementChild);
+        toast.show();
+
+        // Opcional: Mover la tarjeta visualmente si no fue arrastrada por este cliente
+        // Esto es útil para sincronizar múltiples clientes
+        const taskCard = document.querySelector(`[data-task-id="${data.task_id}"]`);
+        if (taskCard && taskCard !== draggedItem) { // draggedItem es la tarjeta que este cliente arrastró
+            const targetColumnId = `column-${data.new_status}`;
+            const targetColumn = document.getElementById(targetColumnId);
+            if (targetColumn) {
+                targetColumn.appendChild(taskCard);
+                taskCard.dataset.status = data.new_status;
+            }
+        }
     });
 </script>
 {% endblock %}
