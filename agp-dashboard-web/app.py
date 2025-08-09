@@ -224,8 +224,38 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/logout')
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
 
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        users = _load_users()
+
+        if not username or not password or not confirm_password:
+            flash('Todos los campos son obligatorios.', 'danger')
+            return render_template('register.html')
+
+        if username in users:
+            flash('El nombre de usuario ya existe.', 'danger')
+            return render_template('register.html')
+
+        if password != confirm_password:
+            flash('Las contraseñas no coinciden.', 'danger')
+            return render_template('register.html')
+
+        hashed_password = generate_password_hash(password)
+        users[username] = {'password_hash': hashed_password}
+        _save_json(USERS_FILE, users)
+        flash('Registro exitoso. Por favor, inicia sesión.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+@app.route('/logout')
 def logout():
     logout_user()
     flash('Has cerrado sesión correctamente.', 'info')
