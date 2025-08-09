@@ -242,7 +242,17 @@ def dashboard():
         {'timestamp': '2025-08-07 15:00:00', 'description': 'Nuevo proyecto "Sistema de Gestión de Clientes" añadido.'},
     ]
 
-    return render_template('dashboard.html', stats=stats, recent_activity=recent_activity)
+    # Calcular estadísticas de proyectos por estado
+    project_status_counts = Counter(p.get('estado', 'desconocido') for p in all_proyectos)
+
+    # Calcular estadísticas de tareas por estado (ya que no hay prioridad)
+    task_status_counts = Counter(t.get('estado', 'desconocido') for t in all_tareas)
+
+    return render_template('dashboard.html',
+                           stats=stats,
+                           recent_activity=recent_activity,
+                           project_status_counts=project_status_counts,
+                           task_status_counts=task_status_counts)
 
 @app.route('/mcp_manager')
 
