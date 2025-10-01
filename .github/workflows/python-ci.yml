@@ -1,0 +1,105 @@
+name: AGP Platform CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install dependencies
+        run: poetry install --no-interaction
+        working-directory: ./agp-gemini-cli
+      - name: Run tests
+        run: poetry run pytest
+        working-directory: ./agp-gemini-cli
+
+  test-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install dependencies
+        run: poetry install --no-interaction
+        working-directory: ./agp-dashboard-web
+      - name: Run tests
+        run: poetry run pytest
+        working-directory: ./agp-dashboard-web
+
+  test-enterprise-agent: # NEW JOB
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install dependencies
+        run: poetry install --no-interaction
+        working-directory: ./agp-enterprise-agent
+      - name: Run tests
+        run: poetry run pytest # Assuming pytest is used for agent tests
+        working-directory: ./agp-enterprise-agent
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install linting tools (dashboard)
+        run: poetry install --with dev --no-interaction
+        working-directory: ./agp-dashboard-web
+      - name: Run flake8 (dashboard)
+        run: poetry run flake8 .
+        working-directory: ./agp-dashboard-web
+      - name: Install linting tools (cli) # NEW STEP
+        run: poetry install --with dev --no-interaction
+        working-directory: ./agp-gemini-cli
+      - name: Run flake8 (cli) # NEW STEP
+        run: poetry run flake8 .
+        working-directory: ./agp-gemini-cli
+      - name: Install linting tools (agent) # NEW STEP
+        run: poetry install --with dev --no-interaction
+        working-directory: ./agp-enterprise-agent
+      - name: Run flake8 (agent) # NEW STEP
+        run: poetry run flake8 .
+        working-directory: ./agp-enterprise-agent
+
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install docs tools
+        run: poetry install --with dev --no-interaction
+        working-directory: ./docs
+      - name: Build documentation
+        run: poetry run mkdocs build --strict
+        working-directory: ./docs
