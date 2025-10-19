@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Tareas - AGP Dashboard{% endblock %}
+
+{% block styles %}
+<style>
+    .skeleton-box {
+        display: inline-block;
+        height: 1em;
+        width: 100%;
+        background: linear-gradient(-90deg, #f0f0f0 0%, #fafafa 50%, #f0f0f0 100%);
+        background-size: 400% 400%;
+        animation: skeleton-pulse 1.2s ease-in-out infinite;
+        border-radius: 4px;
+    }
+    .dark-mode .skeleton-box {
+        background: linear-gradient(-90deg, #3a3a3a 0%, #404040 50%, #3a3a3a 100%);
+        background-size: 400% 400%;
+    }
+    @keyframes skeleton-pulse {
+        0% { background-position: 100% 50%; }
+        100% { background-position: 0 50%; }
+    }
+    #task-table-container.loading {
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Gestión de Tareas</h1>
+
+    <form id="search-form">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-3 col-md-6">
+                <label for="search-input" class="form-label">DescripciÃ³n</label>
+                <input type="text" name="search" id="search-input" placeholder="Buscar tarea..." value="{{ search_query if search_query else '' }}" class="form-control">
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label for="status-filter" class="form-label">Estado</label>
+                <select id="status-filter" name="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_progreso">En Progreso</option>
+                    <option value="completada">Completada</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label for="start-date" class="form-label">Desde</label>
+                <input type="date" id="start-date" name="start_date" class="form-control">
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label for="end-date" class="form-label">Hasta</label>
+                <input type="date" id="end-date" name="end_date" class="form-control">
+            </div>
+            <div class="col-lg-3 col-md-12 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100 me-2"><i class="bi bi-filter"></i> Filtrar</button>
+                <button type="button" id="clear-filters-btn" class="btn btn-outline-secondary w-100"><i class="bi bi-x-lg"></i> Limpiar</button>
+            </div>
+        </div>
+        <div class="row g-3 mt-2 align-items-end">
+            <div class="col-lg-3 col-md-6">
+                <label for="sort-by-select" class="form-label">Ordenar por</label>
+                <select id="sort-by-select" name="sort_by" class="form-select">
+                    <option value="fecha_modificacion">Ãšltima ModificaciÃ³n</option>
+                    <option value="descripcion">DescripciÃ³n</option>
+                    <option value="estado">Estado</option>
+                    <option value="fecha_vencimiento">Vencimiento</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label for="sort-order-select" class="form-label">Orden</label>
+                <select id="sort-order-select" name="sort_order" class="form-select">
+                    <option value="desc">Descendente</option>
+                    <option value="asc">Ascendente</option>
+                </select>
+            </div>
+        </div>
+    </form>
+
+<div id="task-table-container">
+    <!-- El contenido se generará dinámicamente -->
+</div>
+
+<div class="add-button-container text-center mt-4">
+    <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+        <i class="bi bi-plus-lg"></i> Añadir Nueva Tarea
+    </button>
+    <a href="{{ url_for('tasks.export_tasks') }}" class="btn btn-primary me-2">Exportar Tareas (CSV)</a>
+    <a href="{{ url_for('tasks.export_tasks_ics') }}" class="btn btn-secondary me-2"><i class="bi bi-calendar-plus"></i> Exportar a Calendario</a>
+    <button id="voiceTaskBtn" class="btn btn-info"><i class="bi bi-mic-fill"></i> Añadir por Voz</button>
+</div>
+
+<!-- Add/Edit Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addTaskModalLabel">Añadir Nueva Tarea</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTaskForm">
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción de la Tarea:</label>
+                        <input type="text" id="descripcion" name="descripcion" class="form-control" placeholder="Describe la tarea" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="estado" class="form-label">Estado:</label>
+                        <select id="estado" name="estado" class="form-select">
+                            <option value="pendiente" selected>Pendiente</option>
+                            <option value="en_progreso">En Progreso</option>
+                            <option value="completada">Completada</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="proyecto" class="form-label">Proyecto:</label>
+                        <select id="proyecto" name="proyecto" class="form-select">
+                            <option value="">Sin Proyecto</option>
+                            <!-- Los proyectos se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Tarea</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Delete Confirmation Modal (remains the same) -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Estás seguro de que quieres eliminar este elemento? Esta acción no se puede deshacer.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <a href="#" id="confirmDeleteButton" class="btn btn-danger">Eliminar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('task-table-container');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const filterButton = searchForm.querySelector('button[type="submit"]');
+        const formControls = searchForm.querySelectorAll('input, select, button');
+
+        // Modal elements
+        const addTaskModalEl = document.getElementById('addTaskModal');
+        const addTaskModal = new bootstrap.Modal(addTaskModalEl);
+        const addTaskForm = document.getElementById('addTaskForm');
+        const proyectoSelect = document.getElementById('proyecto');
+
+        const handleFetchError = (error, contextMessage = 'Error de comunicaciÃ³n con el servidor.') => {
+            console.error(`Fetch Error (${contextMessage}):`, error);
+            showToast('Error', contextMessage, 'danger');
+        };
+
+        const renderSkeleton = () => {
+            const skeletonRow = `
+                <tr>
+                    <td><span class="skeleton-box" style="width: 80%;"></span></td>
+                    <td><span class="skeleton-box" style="width: 50%;"></span></td>
+                    <td><span class="skeleton-box" style="width: 60%;"></span></td>
+                    <td><span class="skeleton-box" style="width: 70%;"></span></td>
+                    <td><span class="skeleton-box" style="width: 90%;"></span></td>
+                </tr>
+            `;
+            const skeletonHTML = `
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr><th>DescripciÃ³n</th><th>Estado</th><th>Vencimiento</th><th>Ãšltima ModificaciÃ³n</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody>
+                            ${skeletonRow.repeat(5)}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            container.innerHTML = skeletonHTML;
+        };
+
+        const fetchAndRenderTasks = async (page = 1) => {
+            renderSkeleton();
+            container.classList.add('loading');
+            formControls.forEach(control => control.disabled = true);
+            filterButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Filtrando...`;
+
+            const search = document.getElementById('search-input').value;
+            const status = document.getElementById('status-filter').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const sortBy = document.getElementById('sort-by-select').value;
+            const sortOrder = document.getElementById('sort-order-select').value;
+
+            const url = new URL("{{ url_for('api.api_tasks') }}", window.location.origin);
+            url.searchParams.set('page', page);
+            if (search) url.searchParams.set('search', search);
+            if (status) url.searchParams.set('status', status);
+            if (startDate) url.searchParams.set('start_date', startDate);
+            if (endDate) url.searchParams.set('end_date', endDate);
+            if (sortBy) url.searchParams.set('sort_by', sortBy);
+            if (sortOrder) url.searchParams.set('sort_order', sortOrder);
+
+            // Update browser history
+            const browserUrl = new URL(window.location);
+            browserUrl.search = url.search;
+            history.pushState({}, '', browserUrl);
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                render(data);
+            } catch (error) {
+                container.innerHTML = ''; // Clear skeleton
+                handleFetchError(error, 'Error al cargar las tareas.');
+            } finally {
+                container.classList.remove('loading');
+                formControls.forEach(control => control.disabled = false);
+                filterButton.innerHTML = `<i class="bi bi-filter"></i> Filtrar`;
+            }
+        };
+
+        const render = (data) => {
+            if (!data.tasks || data.tasks.length === 0) {
+                let message = searchInput.value
+                    ? `No se encontraron tareas que coincidan con "<strong>${searchInput.value}</strong>".`
+                    : 'Â¡Comienza por organizar tu dÃ\xada!';
+                let button = searchInput.value
+                    ? `<a href="#" onclick="document.getElementById('search-form').reset(); fetchAndRenderTasks(1); return false;" class="btn btn-secondary mt-3"><i class="bi bi-x-lg"></i> Limpiar BÃºsqueda</a>`
+                    : `<button type="button" class="btn btn-lg btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addTaskModal"><i class="bi bi-plus-lg"></i> Crear tu primera tarea</button>`;
+                
+                container.innerHTML = `
+                    <div class="text-center p-5 my-5 bg-body-tertiary rounded-3 border">
+                        <svg width="150" height="150" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-4">
+                            <style>
+                                .base { fill: #24283b; }
+                                .outline { stroke: #414868; stroke-width: 2; }
+                                .text { fill: #545c7e; font-family: sans-serif; font-size: 14px; text-anchor: middle; }
+                                .icon { stroke: #545c7e; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+                            </style>
+                            <rect class="base" width="200" height="200" rx="15"/>
+                            <g transform="translate(50, 40)">
+                                <path class="outline" d="M20,0 H80 C91.0457,0 100,8.9543 100,20 V90 C100,101.046 91.0457,110 80,110 H20 C8.9543,110 0,101.046 0,90 V20 C0,8.9543 8.9543,0 20,0 Z" fill="#1a1b26"/>
+                                <circle class="icon" cx="45" cy="50" r="18"/>
+                                <line class="icon" x1="58" y1="63" x2="75" y2="80"/>
+                                <line class="icon" x1="20" y1="25" x2="80" y2="25"/>
+                                <line class="icon" x1="20" y1="85" x2="60" y2="85"/>
+                            </g>
+                        </svg>
+                        <h3 class="mt-4">No hay tareas para mostrar</h3>
+                        <p class="lead text-muted">${message}</p>
+                        ${button}
+                    </div>`;
+                return;
+            }
+
+            const rows = data.tasks.map(task => {
+                const statusBadge = `<span class="badge rounded-pill ${ task.estado === 'pendiente' ? 'bg-warning text-dark' : task.estado === 'en_progreso' ? 'bg-info' : 'bg-success' }">${ task.estado.replace('_',' ').replace(/\b\w/g, l => l.toUpperCase()) }</span>`;
+                const dueDate = task.fecha_vencimiento ? `<span class="badge bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis">${task.fecha_vencimiento.split('T')[0]}</span>` : '<span class="text-muted">--</span>';
+                const modifiedDate = new Date(task.fecha_modificacion).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const editUrl = "{{ url_for('tasks.task_edit', task_id='TASK_ID') }}".replace('TASK_ID', task.id);
+                const deleteUrl = "{{ url_for('api.delete_task', task_id='TASK_ID') }}".replace('TASK_ID', task.id);
+
+                return `
+                    <tr>
+                        <td>${task.descripcion}</td>
+                        <td>${statusBadge}</td>
+                        <td>${dueDate}</td>
+                        <td>${modifiedDate}</td>
+                        <td>
+                            <a href="${editUrl}" class="btn btn-sm btn-info me-2">Editar</a>
+                            <a href="#" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal" data-bs-delete-url="${deleteUrl}">Eliminar</a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            const tableHTML = `
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>DescripciÃ³n</th>
+                                <th>Estado</th>
+                                <th>Vencimiento</th>
+                                <th>Ãšltima ModificaciÃ³n</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+
+            let paginationHTML = '';
+            if (data.total_pages > 1) {
+                paginationHTML += '<nav aria-label="Page navigation"><ul class="pagination justify-content-center">';
+                if (data.page > 1) {
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${data.page - 1}">Anterior</a></li>`;
+                }
+                for (let p = 1; p <= data.total_pages; p++) {
+                    paginationHTML += `<li class="page-item ${p === data.page ? 'active' : ''}"><a class="page-link" href="#" data-page="${p}">${p}</a></li>`;
+                }
+                if (data.page < data.total_pages) {
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${data.page + 1}">Siguiente</a></li>`;
+                }
+                paginationHTML += '</ul></nav>';
+            }
+
+            container.innerHTML = tableHTML + paginationHTML;
+
+            // Apply staggered animation to new rows
+            const rowsForAnimation = container.querySelectorAll('tbody tr');
+            rowsForAnimation.forEach((row, index) => {
+                row.classList.add('stagger-in');
+                row.style.animationDelay = `${index * 0.05}s`;
+            });
+        };
+
+        // --- Event Listeners ---
+        container.addEventListener('click', e => {
+            if (e.target.matches('.page-link')) {
+                e.preventDefault();
+                const page = e.target.dataset.page;
+                fetchAndRenderTasks(page);
+            }
+        });
+
+        searchForm.addEventListener('submit', e => {
+            e.preventDefault();
+            fetchAndRenderTasks(1);
+        });
+
+        document.getElementById('clear-filters-btn').addEventListener('click', () => {
+            searchForm.reset();
+            // After resetting, we need to manually clear the URL params and fetch
+            const url = new URL(window.location);
+            url.search = '';
+            history.pushState({}, '', url);
+            fetchAndRenderTasks(1);
+        });
+
+        const deleteConfirmationModalEl = document.getElementById('deleteConfirmationModal');
+        const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+        let deleteUrlToDelete = '';
+
+        deleteConfirmationModalEl.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            deleteUrlToDelete = button.getAttribute('data-bs-delete-url');
+        });
+
+        confirmDeleteButton.addEventListener('click', async function(event) {
+            event.preventDefault();
+            if (!deleteUrlToDelete) return;
+
+            const deleteModal = bootstrap.Modal.getInstance(deleteConfirmationModalEl);
+
+            try {
+                const response = await fetch(deleteUrlToDelete, { method: 'DELETE' });
+                if (response.ok) {
+                    showToast('Ã‰xito', 'El elemento ha sido eliminado.', 'success');
+                    fetchAndRenderTasks(1); // Refresh table
+                } else {
+                    const result = await response.json();
+                    showToast('Error', result.message || 'No se pudo eliminar el elemento.', 'danger');
+                }
+            } catch (error) {
+                handleFetchError(error, 'No se pudo comunicar con el servidor para eliminar el elemento.');
+            } finally {
+                deleteModal.hide();
+                deleteUrlToDelete = '';
+            }
+        });
+
+        // --- Modal Form Logic ---
+        async function loadProjectsForModal() {
+            try {
+                const response = await fetch("{{ url_for('api.get_projects') }}");
+                const data = await response.json();
+                proyectoSelect.innerHTML = '<option value="">Sin Proyecto</option>';
+                data.projects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.nombre;
+                    option.textContent = project.nombre;
+                    proyectoSelect.appendChild(option);
+                });
+            } catch (error) {
+                handleFetchError(error, 'Error al cargar proyectos para el modal.');
+            }
+        }
+
+        addTaskModalEl.addEventListener('show.bs.modal', function () {
+            loadProjectsForModal();
+        });
+
+        addTaskForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const submitButton = addTaskForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+            const taskData = {
+                descripcion: addTaskForm.querySelector('#descripcion').value,
+                estado: addTaskForm.querySelector('#estado').value,
+                proyecto: addTaskForm.querySelector('#proyecto').value || null
+            };
+
+            try {
+                const response = await fetch("{{ url_for('api.create_task') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (response.ok) {
+                    addTaskModal.hide();
+                    addTaskForm.reset();
+                    showToast('Ã‰xito', 'Tarea aÃ±adida correctamente.', 'success');
+                    fetchAndRenderTasks(1);
+                } else {
+                    const result = await response.json();
+                    showToast('Error', result.message || 'OcurriÃ³ un error.', 'danger');
+                }
+            } catch (error) {
+                handleFetchError(error, 'Error al guardar la tarea.');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Guardar Tarea';
+            }
+        });
+
+
+        // --- Initial Load ---
+        function initializeFormFromURL() {
+            const initialUrlParams = new URLSearchParams(window.location.search);
+            document.getElementById('search-input').value = initialUrlParams.get('search') || '';
+            document.getElementById('status-filter').value = initialUrlParams.get('status') || '';
+            document.getElementById('start-date').value = initialUrlParams.get('start_date') || '';
+            document.getElementById('end-date').value = initialUrlParams.get('end_date') || '';
+            document.getElementById('sort-by-select').value = initialUrlParams.get('sort_by') || 'fecha_modificacion';
+            document.getElementById('sort-order-select').value = initialUrlParams.get('sort_order') || 'desc';
+            
+            const page = initialUrlParams.get('page') || 1;
+            fetchAndRenderTasks(page);
+        }
+
+        initializeFormFromURL();
+
+        // --- Voice task logic (remains the same) ---
+        const voiceTaskBtn = document.getElementById('voiceTaskBtn');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            voiceTaskBtn.addEventListener('click', () => {
+                voiceTaskBtn.disabled = true;
+                voiceTaskBtn.innerHTML = '<i class="bi bi-mic-fill"></i> Escuchando...';
+                try { recognition.start(); } catch(e) {
+                    console.error("Error al iniciar reconocimiento: ", e);
+                    showToast('Error de Voz', 'El reconocimiento ya estÃ¡ activo o hubo un error.', 'warning');
+                    voiceTaskBtn.disabled = false;
+                    voiceTaskBtn.innerHTML = '<i class="bi bi-mic-fill"></i> AÃ±adir por Voz';
+                }
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                voiceTaskBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Procesando...';
+                
+                fetch("{{ url_for('tasks.voice_task') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: transcript })
+                })
+                .then(response => response.ok ? response.json() : Promise.reject(response))
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('Ã‰xito', 'Tarea creada por voz.', 'success');
+                        fetchAndRenderTasks(1);
+                    } else {
+                        showToast('Error', 'Error al crear la tarea por voz: ' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    handleFetchError(error, 'Error al crear la tarea por voz.');
+                })
+                .finally(() => {
+                    voiceTaskBtn.disabled = false;
+                    voiceTaskBtn.innerHTML = '<i class="bi bi-mic-fill"></i> AÃ±adir por Voz';
+                });
+            };
+
+            recognition.onspeechend = () => { recognition.stop(); };
+            recognition.onerror = (event) => {
+                handleFetchError(event.error, 'Error en el reconocimiento de voz.');
+                voiceTaskBtn.disabled = false;
+                voiceTaskBtn.innerHTML = '<i class="bi bi-mic-fill"></i> AÃ±adir por Voz';
+            };
+        } else {
+            voiceTaskBtn.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}
