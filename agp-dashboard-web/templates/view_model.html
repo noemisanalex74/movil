@@ -1,0 +1,55 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+{{ model.name }} - Laboratorio 3D
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ model.name }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('threed_lab.lab') }}">Laboratorio 3D</a></li>
+        <li class="breadcrumb-item active">{{ model.name }}</li>
+    </ol>
+
+    <div class="row">
+        <!-- 3D Viewer Column -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-box-fill me-1"></i>
+                    Visor 3D
+                </div>
+                <div class="card-body p-0">
+                    <model-viewer src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+                                    poster="{{ url_for('static', filename='uploads/images_3d/' + model.image_filename) }}"
+                                    alt="{{ model.name }}"
+                                    auto-rotate
+                                    camera-controls
+                                    ar
+                                    style="width: 100%; height: 500px;">
+                    </model-viewer>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Column -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    Detalles
+                </div>
+                <div class="card-body">
+                    <h5>Imagen Original</h5>
+                    <img src="{{ url_for('static', filename='uploads/images_3d/' + model.image_filename) }}" class="img-fluid rounded mb-3" alt="Imagen original de {{ model.name }}">
+                    <p><strong>Creado:</strong> {{ model.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <!-- Add other metadata here in the future -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

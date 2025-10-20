@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Programar Nuevo Playbook - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h1 class="h3 mb-4">Programar Nuevo Playbook</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Detalles de la Tarea</h6>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('scheduler.add_job') }}" method="POST">
+                <div class="mb-3">
+                    <label for="job_id" class="form-label">ID de la Tarea</label>
+                    <input type="text" class="form-control" id="job_id" name="job_id" required>
+                    <div class="form-text">Un identificador único para esta tarea (ej. `backup_diario`). No puede contener espacios.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="job_name" class="form-label">Nombre Descriptivo</label>
+                    <input type="text" class="form-control" id="job_name" name="job_name" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="playbook_id" class="form-label">Playbook a Ejecutar</label>
+                    <select class="form-select" id="playbook_id" name="playbook_id" required>
+                        <option selected disabled value="">Selecciona un playbook...</option>
+                        {% for playbook in playbooks %}
+                        <option value="{{ playbook.id }}">{{ playbook.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="agent_id" class="form-label">Agente de Destino</label>
+                    <select class="form-select" id="agent_id" name="agent_id" required>
+                        <option selected disabled value="">Selecciona un agente...</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}">{{ agent.name }} @ {{ agent.location }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="mb-3">
+                    <label for="trigger_type" class="form-label">Tipo de Disparador (Trigger)</label>
+                    <select class="form-select" id="trigger_type" name="trigger_type" required>
+                        <option selected disabled value="">Selecciona un tipo...</option>
+                        <option value="interval">Intervalo</option>
+                        <option value="cron">Cron</option>
+                    </select>
+                </div>
+
+                <!-- Interval Fields -->
+                <div id="interval_fields" class="trigger-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label for="interval_minutes" class="form-label">Ejecutar cada (minutos)</label>
+                        <input type="number" class="form-control" id="interval_minutes" name="interval_minutes" min="1">
+                    </div>
+                </div>
+
+                <!-- Cron Fields -->
+                <div id="cron_fields" class="trigger-fields" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="cron_day_of_week" class="form-label">Día de la semana</label>
+                            <input type="text" class="form-control" id="cron_day_of_week" name="cron_day_of_week" placeholder="mon-fri, sat, *">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="cron_hour" class="form-label">Hora</label>
+                            <input type="text" class="form-control" id="cron_hour" name="cron_hour" placeholder="0-23, *">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="cron_minute" class="form-label">Minuto</label>
+                            <input type="text" class="form-control" id="cron_minute" name="cron_minute" placeholder="0-59, */5, *">
+                        </div>
+                    </div>
+                     <div class="form-text">Para más información sobre el formato Cron, consulta la <a href="https://apscheduler.readthedocs.io/en/latest/modules/triggers/cron.html#expression-types" target="_blank">documentación de APScheduler</a>.</div>
+                </div>
+
+                <button type="submit" class="btn btn-success">Programar Tarea</button>
+                <a href="{{ url_for('scheduler.scheduler_manager') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const triggerType = document.getElementById('trigger_type');
+    const intervalFields = document.getElementById('interval_fields');
+    const cronFields = document.getElementById('cron_fields');
+
+    function toggleTriggerFields() {
+        const selectedValue = triggerType.value;
+        intervalFields.style.display = selectedValue === 'interval' ? 'block' : 'none';
+        cronFields.style.display = selectedValue === 'cron' ? 'block' : 'none';
+    }
+
+    triggerType.addEventListener('change', toggleTriggerFields);
+    
+    // Run on page load in case of form validation reload
+    toggleTriggerFields();
+});
+</script>
+{% endblock %}

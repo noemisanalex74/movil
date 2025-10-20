@@ -1,0 +1,160 @@
+
+{% extends "base.html" %}
+
+{% block title %}Asistente Gemini - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Asistente Gemini</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Consola de Chat</h6>
+        </div>
+        <div class="card-body" id="chat-body" style="height: 500px; overflow-y: auto; display: flex; flex-direction: column-reverse;">
+            <!-- Chat messages will be appended here -->
+            <div id="chat-messages" class="d-flex flex-column"></div>
+        </div>
+        <div class="card-footer">
+            <form id="chat-form">
+                <div class="input-group">
+                    <input type="text" id="message-input" class="form-control" placeholder="Escribe tu mensaje aquí..." autocomplete="off">
+                    <button class="btn btn-primary" type="submit" id="send-button">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Enviar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatForm = document.getElementById('chat-form');
+    const messageInput = document.getElementById('message-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const sendButton = document.getElementById('send-button');
+    const spinner = sendButton.querySelector('.spinner-border');
+
+    // Function to add a message to the chat window
+    function addMessage(sender, message) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('p-2', 'rounded', 'mb-2', 'mw-75');
+        
+        if (sender === 'user') {
+            messageElement.classList.add('bg-primary', 'text-white', 'align-self-end');
+            messageElement.style.marginLeft = 'auto';
+            messageElement.textContent = message;
+        } else {
+            messageElement.classList.add('bg-light', 'text-dark', 'align-self-start');
+            
+            // Sanitize and format the message
+            const sanitizedMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            let finalHtml = `<pre style="white-space: pre-wrap; margin: 0;"><code>${sanitizedMessage}</code></pre>`;
+
+            // Check for executable commands
+            const commandRegex = /COMANDO_SUGERIDO:\s*(.+)/;
+            const match = message.match(commandRegex);
+
+            if (match) {
+                const command = match[1].trim();
+                const commandText = message.replace(commandRegex, '').trim();
+                
+                finalHtml = `<pre style="white-space: pre-wrap; margin: 0;"><code>${commandText}</code></pre>
+                             <div class="mt-2">
+                                 <button class="btn btn-sm btn-outline-success execute-command-btn" data-command="${escape(command)}">
+                                     <i class="bi bi-play-fill"></i> Ejecutar: <code>${command}</code>
+                                 </button>
+                             </div>`;
+            }
+            
+            messageElement.innerHTML = finalHtml;
+        }
+
+        chatMessages.appendChild(messageElement);
+        
+        // Scroll to the bottom of the chat body
+        const chatBody = document.getElementById('chat-body');
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    chatForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const message = messageInput.value.trim();
+        if (message === '') return;
+
+        addMessage('user', message);
+        messageInput.value = '';
+        
+        // Show spinner and disable button
+        spinner.classList.remove('d-none');
+        sendButton.disabled = true;
+
+        // Send message to the server
+        fetch("{{ url_for('gemini_cli.send_message') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                addMessage('model', `Error: ${data.error}`);
+            } else {
+                addMessage('model', data.response);
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            addMessage('model', 'Error: No se pudo conectar con el servidor.');
+        })
+        .finally(() => {
+            // Hide spinner and enable button
+            spinner.classList.add('d-none');
+            sendButton.disabled = false;
+            messageInput.focus();
+        });
+    });
+
+    // Event listener for executing commands
+    chatMessages.addEventListener('click', function(event) {
+        const target = event.target.closest('.execute-command-btn');
+        if (!target) return;
+
+        const command = unescape(target.dataset.command);
+        target.disabled = true;
+        target.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Ejecutando...`;
+
+        addMessage('system', `Ejecutando comando: ${command}`);
+
+        fetch("{{ url_for('gemini_cli.execute_command') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ command: command }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            const output = data.output || `Error: ${data.error}`;
+            addMessage('system', `Resultado:\n${output}`);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            addMessage('system', 'Error: No se pudo ejecutar el comando.');
+        })
+        .finally(() => {
+            target.style.display = 'none'; // Hide button after execution
+        });
+    });
+
+    messageInput.focus();
+});
+</script>
+{% endblock %}

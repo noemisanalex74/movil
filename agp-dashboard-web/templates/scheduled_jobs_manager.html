@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Programador de Tareas - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Programador de Tareas</h1>
+        <a href="{{ url_for('scheduler.add_job') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle-fill me-2"></i>Añadir Tarea Programada
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Tareas Programadas Actualmente</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID de la Tarea</th>
+                            <th>Nombre</th>
+                            <th>Tipo de Trigger</th>
+                            <th>Próxima Ejecución</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if jobs and jobs|length > 0 %}
+                            {% for job in jobs %}
+                                <tr>
+                                    <td><code>{{ job.id }}</code></td>
+                                    <td>{{ job.name }}</td>
+                                    <td>{{ job.trigger }}</td>
+                                    <td>
+                                        {% if job.next_run_time %}
+                                            {{ job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z') }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('scheduler.delete_job', job_id=job.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta tarea programada?');">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Eliminar"><i class="bi bi-trash-fill"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted pt-4 pb-4">No hay tareas programadas.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

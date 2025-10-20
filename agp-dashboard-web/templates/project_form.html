@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_form_helpers.html" import render_field %}
+
+{% block title %}{{ title }} - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title">{{ title }}</h1>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ render_field(form.name, class="form-control", placeholder="Nombre Ãºnico del proyecto") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ render_field(form.description, class="form-control", rows=5, placeholder="Describe el propÃ³sito del proyecto...") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ render_field(form.path, class="form-control", placeholder="Ej: /ruta/a/mi/proyecto") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ render_field(form.status, class="form-select") }}
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('projects.projects_manager') }}" class="btn btn-secondary me-md-2">Cancelar</a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

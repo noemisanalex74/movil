@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Ejecutar Comando CLI - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Ejecutar Comando CLI</h1>
+
+<form method="POST" class="mb-4" id="commandForm">
+    <div class="mb-3">
+        <label for="command" class="form-label">Comando:</label>
+        <input type="text" id="command" name="command" placeholder="Ej: python main.py --help" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary" id="executeButton">
+        Ejecutar
+        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="loadingSpinner"></span>
+    </button>
+</form>
+
+{% if command_output %}
+    <h2 class="mb-3">Salida del Comando:</h2>
+    <pre class="bg-secondary text-primary p-3 rounded w-100" style="max-height: 40vh; overflow-y: auto;">{{ command_output }}</pre>
+{% endif %}
+
+{% if command_history %}
+    <div class="command-history mt-4 pt-4 border-top">
+        <h2 class="mb-3">Historial de Comandos:</h2>
+        <ul class="list-group">
+            {% for cmd in command_history %}
+                <li class="list-group-item" onclick="document.getElementById('command').value = '{{ cmd | e }}'">{{ cmd }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Volver al Dashboard</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('commandForm').addEventListener('submit', function() {
+        document.getElementById('executeButton').disabled = true;
+        document.getElementById('loadingSpinner').classList.remove('d-none');
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Comandos Permitidos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Gestión de Comandos Permitidos</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Lista de Comandos Permitidos
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('allowed_commands_manager') }}">
+                <div id="commands-container">
+                    {% if commands %}
+                        {% for command in commands %}
+                            <div class="row mb-3 command-item">
+                                <div class="col-md-5">
+                                    <label for="command_name_{{ loop.index0 }}" class="form-label visually-hidden">Nombre del Comando</label>
+                                    <input type="text" class="form-control" id="command_name_{{ loop.index0 }}" name="command_name[]" value="{{ command.name }}" placeholder="Nombre del Comando" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="command_description_{{ loop.index0 }}" class="form-label visually-hidden">Descripción</label>
+                                    <input type="text" class="form-control" id="command_description_{{ loop.index0 }}" name="command_description[]" value="{{ command.description }}" placeholder="Descripción">
+                                </div>
+                                <div class="col-md-1 d-flex align-items-end">
+                                    <button type="button" class="btn btn-danger remove-command-btn">X</button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="row mb-3 command-item">
+                            <div class="col-md-5">
+                                <label for="command_name_0" class="form-label visually-hidden">Nombre del Comando</label>
+                                <input type="text" class="form-control" id="command_name_0" name="command_name[]" placeholder="Nombre del Comando" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="command_description_0" class="form-label visually-hidden">Descripción</label>
+                                <input type="text" class="form-control" id="command_description_0" name="command_description[]" placeholder="Descripción">
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger remove-command-btn">X</button>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="button" class="btn btn-secondary mb-3" id="add-command-btn">Añadir Comando</button>
+                <button type="submit" class="btn btn-primary mb-3">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const commandsContainer = document.getElementById('commands-container');
+        const addCommandBtn = document.getElementById('add-command-btn');
+
+        let commandIndex = {{ commands|length if commands else 0 }};
+
+        addCommandBtn.addEventListener('click', function() {
+            const newCommandItem = document.createElement('div');
+            newCommandItem.classList.add('row', 'mb-3', 'command-item');
+            newCommandItem.innerHTML = `
+                <div class="col-md-5">
+                    <label for="command_name_${commandIndex}" class="form-label visually-hidden">Nombre del Comando</label>
+                    <input type="text" class="form-control" id="command_name_${commandIndex}" name="command_name[]" placeholder="Nombre del Comando" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="command_description_${commandIndex}" class="form-label visually-hidden">Descripción</label>
+                    <input type="text" class="form-control" id="command_description_${commandIndex}" name="command_description[]" placeholder="Descripción">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger remove-command-btn">X</button>
+                </div>
+            `;
+            commandsContainer.appendChild(newCommandItem);
+            commandIndex++;
+            attachRemoveListeners();
+        });
+
+        function attachRemoveListeners() {
+            document.querySelectorAll('.remove-command-btn').forEach(button => {
+                button.onclick = function() {
+                    // Asegurarse de que siempre haya al menos un campo de comando
+                    if (commandsContainer.children.length > 1) {
+                        this.closest('.command-item').remove();
+                    } else {
+                        // Si solo queda uno, vaciarlo en lugar de eliminarlo
+                        const remainingInputName = commandsContainer.querySelector('input[name="command_name[]"]');
+                        const remainingInputDesc = commandsContainer.querySelector('input[name="command_description[]"]');
+                        if (remainingInputName) remainingInputName.value = '';
+                        if (remainingInputDesc) remainingInputDesc.value = '';
+                    }
+                };
+            });
+        }
+
+        attachRemoveListeners(); // Attach listeners for initial commands
+    });
+</script>
+{% endblock %}

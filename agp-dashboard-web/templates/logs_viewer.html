@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Visor de Logs - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Visor de Logs</h1>
+
+<pre class="bg-secondary text-primary p-3 rounded w-100" style="max-height: 60vh; overflow-y: auto;">{{ log_content }}</pre>
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Volver al Dashboard</a>
+{% endblock %}

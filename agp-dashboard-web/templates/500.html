@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Error del Servidor - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="jumbotron text-center bg-light p-5 rounded-lg">
+        <h1 class="display-4 text-danger">¡Oops! Algo Salió Mal</h1>
+        <p class="lead">Hemos encontrado un error interno en el servidor (Error 500).</p>
+        <hr class="my-4">
+        <p>Estamos trabajando para solucionarlo. Por favor, intenta de nuevo más tarde.</p>
+        <p class="text-muted">Detalles del error:</p>
+        <div class="alert alert-danger" role="alert">
+            <pre>{{ error }}</pre>
+        </div>
+        <a class="btn btn-primary btn-lg" href="{{ url_for('dashboard') }}" role="button">Volver al Dashboard</a>
+    </div>
+</div>
+{% endblock %}

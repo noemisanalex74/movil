@@ -1,0 +1,130 @@
+
+{% extends "base.html" %}
+
+{% block title %}Análisis de Productividad - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Análisis de Productividad</h1>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Tareas Completadas</h5>
+                <p class="display-4 fw-bold">{{ stats.total_completed }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Tareas Completadas (Últimos 30 días)</div>
+            <div class="card-body">
+                <canvas id="last30DaysChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">Productividad por Día de la Semana</div>
+            <div class="card-body">
+                <canvas id="dayOfWeekChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stats = {{ stats | tojson }};
+
+    // --- Chart Colors Utility ---
+    const getChartThemeColors = () => {
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        return {
+            textColor: isDarkMode ? '#c0caf5' : '#212529',
+            gridColor: isDarkMode ? 'rgba(122, 162, 247, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            primary: '#7aa2f7', 
+            green: '#9ece6a'
+        };
+    };
+
+    const createNeonGradient = (ctx, color) => {
+        const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+        gradient.addColorStop(0, `${color}ff`);
+        gradient.addColorStop(1, `${color}33`);
+        return gradient;
+    };
+
+    // --- Last 30 Days Chart (Bar) ---
+    const last30DaysCtx = document.getElementById('last30DaysChart').getContext('2d');
+    const colors = getChartThemeColors();
+    const gradient = createNeonGradient(last30DaysCtx, colors.primary);
+
+    new Chart(last30DaysCtx, {
+        type: 'bar',
+        data: {
+            labels: stats.last_30_days_labels,
+            datasets: [{
+                label: 'Tareas Completadas',
+                data: stats.last_30_days_values,
+                backgroundColor: gradient,
+                borderColor: colors.primary,
+                borderWidth: 2,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: colors.textColor, stepSize: 1 }, grid: { color: colors.gridColor } },
+                x: { ticks: { color: colors.textColor }, grid: { display: false } }
+            }
+        }
+    });
+
+    // --- Day of Week Chart (Radar) ---
+    const dayOfWeekCtx = document.getElementById('dayOfWeekChart').getContext('2d');
+    const gradientRadar = createNeonGradient(dayOfWeekCtx, colors.green);
+
+    new Chart(dayOfWeekCtx, {
+        type: 'radar',
+        data: {
+            labels: stats.day_of_week_labels,
+            datasets: [{
+                label: 'Tareas Completadas',
+                data: stats.day_of_week_values,
+                backgroundColor: 'rgba(158, 206, 106, 0.2)',
+                borderColor: colors.green,
+                pointBackgroundColor: colors.green,
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: colors.green
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                r: {
+                    angleLines: { color: colors.gridColor },
+                    grid: { color: colors.gridColor },
+                    pointLabels: { color: colors.textColor, font: { size: 14 } },
+                    ticks: { backdropColor: 'transparent', color: colors.textColor }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

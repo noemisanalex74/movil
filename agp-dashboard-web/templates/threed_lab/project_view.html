@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Visor 3D: {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <h1 class="h3 mb-4 text-gray-800">Visor de Proyecto: {{ project.name }}</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Modelo 3D Interactivo</h6>
+        </div>
+        <div class="card-body text-center bg-dark">
+            <!-- El componente de Google para el visor 3D y RA -->
+            <model-viewer 
+                src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+                alt="A 3D model of an astronaut"
+                ar
+                ar-modes="webxr scene-viewer quick-look"
+                camera-controls
+                poster="https://modelviewer.dev/shared-assets/models/poster-astronaut.webp"
+                shadow-intensity="1"
+                style="width: 100%; height: 500px;"
+            >
+                <button slot="ar-button" class="btn btn-light position-absolute bottom-0 end-0 m-3">
+                    <i class="bi bi-box-arrow-in-down-right"></i> Ver en tu Espacio (RA)
+                </button>
+            </model-viewer>
+        </div>
+    </div>
+
+    <a href="{{ url_for('threed_lab.lab') }}" class="btn btn-secondary">Volver al Laboratorio 3D</a>
+</div>
+{% endblock %}

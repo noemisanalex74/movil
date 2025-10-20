@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}{{ empresa.nombre }} - Dashboard de Empresa{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h1 class="mb-1">{{ empresa.nombre }}</h1>
+        <p class="text-muted">{{ empresa.sector }} | {{ empresa.ubicacion }}</p>
+        <p>{{ empresa.descripcion }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Associated Agents -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Agentes Asociados</div>
+            <div class="card-body">
+                {% if agents %}
+                <ul class="list-group list-group-flush">
+                    {% for agent in agents %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center" data-agent-id="{{ agent.agent_id }}">
+                        <div>
+                            <i class="bi bi-hdd-network-fill me-2"></i>
+                            {{ agent.name }}
+                        </div>
+                        <span class="badge bg-success">Online</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-center text-muted">No hay agentes asociados.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Playbooks -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Playbooks Disponibles</div>
+            <div class="card-body">
+                {% if playbooks %}
+                <ul class="list-group list-group-flush">
+                    {% for playbook in playbooks %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-file-earmark-play-fill me-2"></i>
+                            {{ playbook.name }}
+                        </div>
+                        <button class="btn btn-sm btn-primary run-playbook-btn" data-filename="{{ playbook.filename }}">Ejecutar</button>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-center text-muted">No hay playbooks disponibles.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Activity History -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">Historial de Actividad</div>
+            <div class="card-body">
+                <p class="text-center text-muted fst-italic">Funcionalidad de historial de actividad próximamente.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.run-playbook-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const playbookFilename = this.dataset.filename;
+            const agentLi = document.querySelector('.list-group-item[data-agent-id]');
+            
+            if (!agentLi) {
+                showToast('Error', 'No hay agentes asociados para ejecutar el playbook.', 'danger');
+                return;
+            }
+            const agentId = agentLi.dataset.agentId;
+
+            if (!confirm(`¿Ejecutar el playbook "${playbookFilename}" en el agente ${agentId}?`)) {
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Ejecutando';
+
+            try {
+                const response = await fetch(`/api/playbooks/run/${playbookFilename}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showToast('Iniciado', result.message, 'info');
+                } else {
+                    showToast('Error', result.error, 'danger');
+                }
+            } catch (error) {
+                showToast('Error de Red', 'No se pudo comunicar con el servidor.', 'danger');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = 'Ejecutar';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -47,3 +47,25 @@ Además de las fases de automatización empresarial, mantenemos los siguientes p
 *   **Interacción Avanzada con Gemini CLI:** Evolucionar la interfaz de Gemini CLI para incluir capacidades de respuesta de audio, proporcionando una experiencia de usuario más natural, accesible y eficiente.
 *   **Aprendizaje Continuo y Optimización Autónoma:** Capacitar a Gemini CLI para analizar y aprender de sus propias interacciones y archivos generados, con el fin de memorizar patrones, mejorar su rendimiento y ofrecer proactivamente sugerencias de optimización para los proyectos de AGP.
 *   **El Móvil como Centro de Operaciones Profesionales:** Consolidar todas estas capacidades para crear un "super móvil profesional" completamente automatizado, que sirva como una herramienta integral para la gestión, desarrollo y demostración de soluciones tecnológicas avanzadas.
+
+### Laboratorio 3D (3D Lab) - De Prueba de Concepto a Herramienta Funcional
+
+El proyecto 3D Lab, actualmente una prueba de concepto que genera vistas 2D, evolucionará para convertirse en una herramienta completa de generación de modelos 3D.
+
+*   **Fase 1: Verificación y Estabilización (Actual):**
+    *   **Objetivo:** Asegurar que el flujo de trabajo actual basado en Google Colab para generar vistas 360° sea robusto y esté bien documentado.
+    *   **Tareas:**
+        *   Validar el proceso con diferentes imágenes de entrada.
+        *   Refinar la documentación según sea necesario.
+
+*   **Fase 2: Reconstrucción a Modelo 3D:**
+    *   **Objetivo:** Implementar la capacidad de convertir las vistas 2D generadas en un modelo 3D tangible (formato `.glb` o `.obj`).
+    *   **Tareas:**
+        *   Investigar e integrar una técnica de reconstrucción 3D (ej. NeRF, Gaussian Splatting) en el notebook de Colab.
+        *   Automatizar el paso de reconstrucción para que se ejecute después de la generación de vistas.
+
+*   **Fase 3: Integración con el Dashboard AGP:**
+    *   **Objetivo:** Conectar el proceso del 3D Lab con el dashboard web para una gestión centralizada.
+    *   **Tareas:**
+        *   Desarrollar una API o método para iniciar el proceso de Colab desde el dashboard.
+        *   Crear una sección en el dashboard para subir imágenes, monitorizar el progreso y visualizar/descargar los modelos 3D resultantes.

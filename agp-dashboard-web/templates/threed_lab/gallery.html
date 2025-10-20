@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Galería de Modelos 3D{% endblock %}
+
+{% block head_extra %}
+    <style>
+        .model-list {
+            list-style: none;
+            padding: 0;
+            max-height: 450px;
+            overflow-y: auto;
+        }
+        .model-list-item {
+            cursor: pointer;
+            padding: 10px 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            transition: background-color 0.2s;
+            color: #ccc;
+        }
+        .model-list-item:hover, .model-list-item.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        #viewer-container {
+            position: sticky;
+            top: 80px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Galería de Modelos 3D</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('threed_lab.lab') }}">Laboratorio 3D</a></li>
+        <li class="breadcrumb-item active">Galería</li>
+    </ol>
+
+    <!-- Laboratorio Local (Decenterland) -->
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-cube"></i>
+            Galería Local
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="d-grid gap-2 mb-4">
+                        <form action="{{ url_for('threed_lab.local_generate') }}" method="POST">
+                            <button type="submit" class="btn btn-success w-100"><i class="fas fa-cogs"></i> Generar/Actualizar Ejemplos</button>
+                        </form>
+                        {% if local_models %}
+                        <form action="{{ url_for('threed_lab.local_delete') }}" method="POST">
+                            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('¿Estás seguro de que quieres eliminar todos los modelos locales?');"><i class="fas fa-trash"></i> Borrar Todos</button>
+                        </form>
+                        {% endif %}
+                    </div>
+
+                    <h5 class="mb-3">Modelos Disponibles</h5>
+                    {% if local_models %}
+                        <ul class="model-list" id="local-model-list">
+                            {% for model in local_models %}
+                                <li class="model-list-item" data-model-src="{{ url_for('static', filename='decenterland_models/' + model) }}">
+                                    <i class="fas fa-box-open"></i> {{ model }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-secondary text-center">No hay modelos locales.</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <h5 class="mb-3">Visor 3D</h5>
+                    <div id="viewer-container">
+                        <model-viewer id="local-model-viewer" src="" alt="Modelo 3D Local" auto-rotate camera-controls exposure="1" shadow-intensity="1" style="width: 100%; height: 500px; background-color:#282c34; border-radius: 10px;">
+                        </model-viewer>
+                        <h6 id="local-model-name-display" class="text-center mt-2 text-muted">Selecciona un modelo de la lista</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Galería de Google Drive -->
+    <div class="card mb-4 border-secondary">
+        <div class="card-header bg-secondary text-white">
+            <i class="bi bi-google"></i>
+            Galería de Google Drive (Salida)
+        </div>
+        <div class="card-body">
+            {% if config_missing or not is_authenticated %}
+                <div class="alert alert-warning text-center">
+                    <p>Para ver los modelos de Google Drive, primero <a href="{{ url_for('settings.settings_manager') }}" class="alert-link">configura las credenciales</a> y <a href="{{ url_for('google_auth.authorize') }}" class="alert-link">autoriza el acceso a Google Drive</a>.</p>
+                </div>
+            {% elif drive_files %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+                    {% for file in drive_files %}
+                    <div class="col">
+                        <div class="card h-100 bg-dark">
+                            <div class="card-body p-2 text-center">
+                                <h6 class="card-title small text-truncate" title="{{ file.name }}">{{ file.name }}</h6>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ file.webContentLink }}" class="btn btn-sm btn-outline-primary" title="Descargar"><i class="bi bi-download"></i></a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-file-id="{{ file.id }}" data-file-name="{{ file.name }}" title="Eliminar de Drive"><i class="bi bi-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-secondary text-center">
+                    <i class="bi bi-box-seam" style="font-size: 2rem;"></i>
+                    <p class="mt-2 mb-0">La carpeta de salida en Drive está vacía o no contiene modelos <code>.glb</code>.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="deleteModalLabel">Confirmar Eliminación</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        ¿Estás seguro de que quieres eliminar el modelo <strong id="fileNameToDelete"></strong> de tu Google Drive?
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="deleteForm" action="" method="post">
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const localModelListItems = document.querySelectorAll('#local-model-list .model-list-item');
+    const localViewer = document.getElementById('local-model-viewer');
+    const localModelNameDisplay = document.getElementById('local-model-name-display');
+
+    if (localViewer) {
+        localModelListItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const modelSrc = item.getAttribute('data-model-src');
+                localViewer.src = modelSrc;
+                localModelNameDisplay.textContent = item.textContent.trim();
+                localModelListItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+        if (localModelListItems.length > 0) { localModelListItems[0].click(); }
+    }
+
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const fileId = button.getAttribute('data-file-id');
+            const fileName = button.getAttribute('data-file-name');
+            const deleteForm = deleteModal.querySelector('#deleteForm');
+            deleteModal.querySelector('#fileNameToDelete').textContent = fileName;
+            deleteForm.action = `{{ url_for('threed_lab.delete_model', file_id='') }}${fileId}`;
+        });
+    }
+});
+</script>
+{% endblock %}

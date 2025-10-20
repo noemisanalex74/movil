@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Chatbot - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">AGP CLI Chatbot</h1>
+
+<div class="chat-window flex-grow-1 border rounded p-3 mb-3 overflow-auto" id="chat-window" style="max-height: 60vh;">
+    {% for chat in chat_history %}
+        <div class="message p-2 mb-2 rounded {{ 'bg-primary text-white align-self-end' if chat.sender == 'user' else 'bg-secondary text-primary align-self-start' }}" style="max-width: 80%;">
+            {{ chat.message }}
+        </div>
+    {% endfor %}
+</div>
+<form class="chat-input d-flex" method="POST">
+    <input type="text" name="user_message" placeholder="Escribe tu mensaje..." class="form-control me-2" required>
+    <button type="submit" class="btn btn-primary">Enviar</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Scroll to the bottom of the chat window on load
+    window.onload = function() {
+        const chatWindow = document.getElementById('chat-window');
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    };
+</script>
+{% endblock %}

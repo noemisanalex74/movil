@@ -1,0 +1,109 @@
+
+{% extends "base.html" %}
+
+{% block title %}Contactos - AGP Dashboard{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .contact-list {
+        list-style: none;
+        padding: 0;
+    }
+    .contact-card {
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Contactos del Teléfono</h1>
+
+<!-- Search Bar -->
+<div class="mb-4">
+    <input type="text" id="contact-search" class="form-control form-control-lg" placeholder="Buscar por nombre o número...">
+</div>
+
+<!-- Contacts List -->
+<div class="contact-list">
+    {% if contacts %}
+        {% for contact in contacts %}
+        <div class="card contact-card mb-3">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title contact-name">{{ contact.name }}</h5>
+                    <p class="card-text contact-number text-muted">{{ contact.number }}</p>
+                </div>
+                <button class="btn btn-primary call-btn" data-number="{{ contact.number }}">
+                    <i class="bi bi-telephone-outbound-fill me-2"></i>Llamar
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="text-center p-5">
+        <h3>No se pudieron cargar los contactos.</h3>
+        <p>Asegúrate de que Termux:API esté instalado y tenga permisos para acceder a los contactos.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('contact-search');
+    const contactCards = document.querySelectorAll('.contact-card');
+
+    // --- Client-side search --- 
+    searchInput.addEventListener('input', function() {
+        const searchTerm = searchInput.value.toLowerCase();
+        contactCards.forEach(card => {
+            const name = card.querySelector('.contact-name').textContent.toLowerCase();
+            const number = card.querySelector('.contact-number').textContent.toLowerCase();
+            if (name.includes(searchTerm) || number.includes(searchTerm)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    // --- Call button handler ---
+    document.querySelectorAll('.call-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const number = this.dataset.number;
+            const originalButtonHtml = this.innerHTML;
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Llamando...';
+
+            try {
+                const response = await fetch("{{ url_for('contacts.make_call') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number: number })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('Éxito', result.message, 'success');
+                } else {
+                    showToast('Error', result.error || 'No se pudo iniciar la llamada.', 'danger');
+                }
+
+            } catch (error) {
+                console.error("Call API error:", error);
+                showToast('Error de Red', 'No se pudo comunicar con el servidor.', 'danger');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = originalButtonHtml;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

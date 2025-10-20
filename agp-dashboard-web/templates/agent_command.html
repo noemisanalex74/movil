@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Comando de Agente{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Enviar Comando a Agente</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Enviar Nuevo Comando
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('agent_command') }}">
+                <div class="mb-3">
+                    <label for="agent_id" class="form-label">Seleccionar Agente:</label>
+                    <select class="form-select" id="agent_id" name="agent_id" required>
+                        <option value="">-- Selecciona un agente --</option>
+                        {% for agent_id, agent_data in agents.items() %}
+                            <option value="{{ agent_id }}">{{ agent_id }} ({{ agent_data.ip }}) - {{ agent_data.status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="command" class="form-label">Comando:</label>
+                    <input type="text" class="form-control" id="command" name="command" placeholder="Ej: ls -l /" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar Comando</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Agentes Conectados
+        </div>
+        <div class="card-body">
+            {% if agents %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID de Agente</th>
+                            <th>IP</th>
+                            <th>Estado</th>
+                            <th>Última Conexión</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for agent_id, agent_data in agents.items() %}
+                        <tr>
+                            <td>{{ agent_id }}</td>
+                            <td>{{ agent_data.ip }}</td>
+                            <td><span class="badge bg-{{ 'success' if agent_data.status == 'online' else 'danger' }}">{{ agent_data.status }}</span></td>
+                            <td>{{ agent_data.last_seen }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No hay agentes conectados actualmente.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card mt-4">
+        <div class="card-header">
+            Salida del Comando
+        </div>
+        <div class="card-body">
+            <pre id="commandOutput" class="bg-dark text-white p-3 rounded" style="max-height: 400px; overflow-y: scroll;">Esperando salida del comando...</pre>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var socket = io(); // Connect to the default namespace
+
+        socket.on('connect', function() {
+            console.log('Conectado al servidor SocketIO del dashboard.');
+        });
+
+        socket.on('disconnect', function() {
+            console.log('Desconectado del servidor SocketIO del dashboard.');
+        });
+
+        socket.on('agent_command_log', function(data) {
+            console.log('Salida de comando recibida:', data);
+            var outputDiv = document.getElementById('commandOutput');
+            var statusClass = '';
+            if (data.status === 'success') {
+                statusClass = 'text-success';
+            } else if (data.status === 'error') {
+                statusClass = 'text-danger';
+            } else if (data.status === 'warning') {
+                statusClass = 'text-warning';
+            }
+
+            outputDiv.innerHTML = `<p class="${statusClass}"><strong>[${data.status.toUpperCase()}] Tarea ${data.task_id}:</strong></p><pre>${data.output}</pre><hr>` + outputDiv.innerHTML;
+            // Optionally scroll to top to show latest output
+            // outputDiv.scrollTop = 0;
+        });
+    });
+</script>
+{% endblock %}

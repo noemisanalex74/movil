@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Creador de Contenido Social{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Creador de Contenido para Redes Sociales</h1>
+    <p class="text-muted">Genera automáticamente borradores de publicaciones para redes sociales basados en noticias de actualidad.</p>
+
+    <!-- Formulario de Generación -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Generar Nuevo Contenido</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('generate_social_content') }}" method="POST">
+                <div class="mb-3">
+                    <label for="topic" class="form-label">Tema de las Noticias:</label>
+                    <input type="text" class="form-control" id="topic" name="topic" placeholder="Ej: inteligencia artificial, ciberseguridad, finanzas" required>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-stars"></i> Generar Ahora</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Historial de Contenido Generado -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Historial de Contenido</h5>
+        </div>
+        <div class="card-body">
+            {% if history %}
+                <div class="row">
+                    {% for item in history | reverse %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header small text-muted">
+                                    {{ item.timestamp | replace('T', ' ') | replace('Z', '') }} UTC
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Tema: {{ item.topic }}</h6>
+                                    <p class="card-text"><strong>Texto:</strong><br>{{ item.text }}</p>
+                                    <p class="card-text"><strong>Idea para Imagen:</strong><br><em>{{ item.image_prompt }}</em></p>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="{{ item.source_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Fuente de la Noticia</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No se ha generado ningún contenido todavía.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

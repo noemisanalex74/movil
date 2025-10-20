@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Gestor de Agente Batch{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4">Gestor de Agente Batch</h1>
+
+    <div class="row">
+        <!-- Columna Izquierda: Estado y Añadir Comandos -->
+        <div class="col-lg-6">
+            <!-- Tarjeta de Estado del Agente -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">Estado del Agente</h6>
+                    <button id="reload-button" class="btn btn-sm btn-primary"><i class="bi bi-arrow-clockwise"></i> Recargar</button>
+                </div>
+                <div class="card-body" id="agent-status-card">
+                    {% if agent_status %}
+                        <p><strong>Última ejecución:</strong> {{ agent_status.last_run_timestamp | replace('T', ' ') | replace('Z', '') }} UTC</p>
+                        <p><strong>Tareas procesadas:</strong> <span class="badge bg-primary">{{ agent_status.last_run_stats.tasks_processed }}</span></p>
+                        <p><strong>Tareas exitosas:</strong> <span class="badge bg-success">{{ agent_status.last_run_stats.tasks_succeeded }}</span></p>
+                        <p><strong>Tareas fallidas:</strong> <span class="badge bg-danger">{{ agent_status.last_run_stats.tasks_failed }}</span></p>
+                    {% else %}
+                        <div class="alert alert-warning" role="alert">
+                            No se encontró el archivo de estado del agente (<code>agent_status.json</code>). Ejecute el agente al menos una vez para generarlo.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tarjeta para Añadir Comandos -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Añadir Comando a la Cola</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('batch_agent_manager') }}" method="POST">
+                        <div class="mb-3">
+                            <label for="command_name" class="form-label">Comando Permitido</label>
+                            <select class="form-select" id="command_name" name="command_name" required>
+                                <option value="" disabled selected>Selecciona un comando...</option>
+                                {% for command in allowed_commands %}
+                                    <option value="{{ command.name }}">{{ command.name }} (<code>{{ command.command }}</code>)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success"><i class="bi bi-plus-circle-fill"></i> Añadir a la Cola</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Columna Derecha: Cola y Logs -->
+        <div class="col-lg-6">
+            <!-- Tarjeta de Cola de Comandos -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold">Cola de Comandos Actual</h6>
+                        <form action="{{ url_for('batch_agent_manager') }}" method="POST" class="m-0">
+                            <input type="hidden" name="action" value="clear_queue">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de que quieres limpiar la cola de comandos?');">
+                                <i class="bi bi-trash-fill"></i> Limpiar Cola
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body" id="command-queue-card">
+                    {% if command_queue and command_queue.queue %}
+                        <ul class="list-group" id="command-queue-list">
+                            {% for command in command_queue.queue %}
+                                <li class="list-group-item">{{ command.command_name }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>La cola de comandos está vacía.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tarjeta de Logs del Agente -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Últimos Logs del Agente (agent.log)</h6>
+                </div>
+                <div class="card-body">
+                    <pre id="agent-log-pre" class="bg-dark text-white p-2 rounded" style="height: 300px; overflow-y: scroll;"><code>{{ agent_log_content | default('No se encontró el archivo agent.log.') }}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const socket = io(); // Conectar al namespace por defecto
+
+        // --- Elementos del DOM ---
+        const statusCardBody = document.getElementById('agent-status-card');
+        const queueCardBody = document.getElementById('command-queue-card');
+        const logPre = document.getElementById('agent-log-pre');
+        const reloadButton = document.getElementById('reload-button');
+
+        // --- Funciones de Actualización ---
+        function updateStatus(status) {
+            if (status) {
+                statusCardBody.innerHTML = `
+                    <p><strong>Última ejecución:</strong> ${status.last_run_timestamp.replace('T', ' ').replace('Z', '')} UTC</p>
+                    <p><strong>Tareas procesadas:</strong> <span class="badge bg-primary">${status.last_run_stats.tasks_processed}</span></p>
+                    <p><strong>Tareas exitosas:</strong> <span class="badge bg-success">${status.last_run_stats.tasks_succeeded}</span></p>
+                    <p><strong>Tareas fallidas:</strong> <span class="badge bg-danger">${status.last_run_stats.tasks_failed}</span></p>
+                `;
+            } else {
+                statusCardBody.innerHTML = '<div class="alert alert-warning" role="alert">No se encontró el archivo de estado del agente.</div>';
+            }
+        }
+
+        function updateQueue(queue) {
+            let content = '';
+            if (queue && queue.queue && queue.queue.length > 0) {
+                content = '<ul class="list-group" id="command-queue-list">';
+                queue.queue.forEach(command => {
+                    content += `<li class="list-group-item">${command.command_name}</li>`;
+                });
+                content += '</ul>';
+            } else {
+                content = '<p>La cola de comandos está vacía.</p>';
+            }
+            queueCardBody.innerHTML = content;
+        }
+
+        function updateLogs(logContent) {
+            if (logContent) {
+                logPre.querySelector('code').textContent = logContent;
+            } else {
+                logPre.querySelector('code').textContent = 'No se encontró el archivo agent.log.';
+            }
+        }
+
+        // --- Eventos Socket.IO ---
+        socket.on('connect', () => {
+            console.log('Conectado al servidor para actualizaciones del agente batch.');
+            socket.emit('request_batch_agent_update'); // Pedir datos al conectar
+        });
+
+        socket.on('batch_agent_update', (data) => {
+            console.log('Recibida actualización del agente batch:', data);
+            updateStatus(data.status);
+            updateQueue(data.queue);
+            updateLogs(data.log);
+            showToast('Datos Recargados', 'El estado del agente batch ha sido actualizado.', 'info');
+        });
+
+        // --- Eventos del DOM ---
+        reloadButton.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevenir recarga de página
+            console.log('Solicitando actualización manual...');
+            socket.emit('request_batch_agent_update');
+        });
+
+        // La función showToast ya está en base.html, por lo que no es necesario 
+        // duplicarla aquí, pero nos aseguramos de que se pueda llamar.
+        function showToast(title, message, type) {
+            // Implementación de fallback o simplemente confiar en la de base.html
+            if (typeof window.showToast === 'function') {
+                window.showToast(title, message, type);
+            } else {
+                const toastContainer = document.querySelector('.toast-container');
+                if (!toastContainer) return;
+                const toastHtml = `
+                    <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <strong>${title}</strong><br>${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+                const toastElement = document.createRange().createContextualFragment(toastHtml);
+                toastContainer.append(toastElement);
+                const toast = new bootstrap.Toast(toastContainer.lastElementChild);
+                toast.show();
+            }
+        }
+    });
+</script>
+{% endblock %}

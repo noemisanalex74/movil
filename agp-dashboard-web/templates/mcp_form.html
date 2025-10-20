@@ -17,6 +17,12 @@
     {% endif %}
 
     <div class="mb-3">
+        <label for="version" class="form-label">Versión (ej. 1.0.0):</label>
+        <input type="text" id="version" name="version" class="form-control" value="{{ tool.version }}" placeholder="ej. 1.0.0">
+        <small class="form-text text-muted">Opcional. Si se especifica, el archivo se guardará como 'nombre_vX_Y_Z.py'.</small>
+    </div>
+
+    <div class="mb-3">
         <label for="content" class="form-label">Contenido del Archivo:</label>
         <textarea id="content" name="content" class="form-control" rows="15" placeholder="Escribe el código de tu herramienta aquí..." required>{{ tool.content }}</textarea>
     </div>
@@ -24,5 +30,5 @@
     <button type="submit" class="btn btn-primary">Guardar</button>
 </form>
 
-<a href="{{ url_for('mcp_manager') }}" class="btn btn-secondary mt-3">Volver a la Gestión de Herramientas</a>
+<a href="{{ url_for('mcp.mcp_manager') }}" class="btn btn-secondary mt-3">Volver a la Gestión de Herramientas</a>
 {% endblock %}

@@ -1,0 +1,21 @@
+{
+  "name": "gemini-cli-patch",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "patch-package && node apply-node-pty-patch.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  
+  "devDependencies": {
+    "patch-package": "^8.0.0"
+  },
+  "dependencies": {
+    "@google/gemini-cli": "^0.4.0"
+  }
+}

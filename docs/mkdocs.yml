@@ -1,0 +1,26 @@
+site_name: 'AGP - Documentación'
+site_description: 'Documentación técnica para la Plataforma de Automatización y Gestión Personal.'
+site_author: 'Alejandro Fernandez'
+
+theme:
+  name: 'material'
+  language: 'es'
+  features:
+    - 'navigation.instant'
+    - 'navigation.sections'
+    - 'navigation.top'
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+
+nav:
+  - 'Inicio': 'index.md'
+  - 'Arquitectura':
+      - 'Conectividad': 'CONNECTIVITY_ARCHITECTURE.md'
+      - 'Esquema de Playbooks': 'PLAYBOOK_SCHEMA.md'

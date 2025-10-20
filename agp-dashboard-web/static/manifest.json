@@ -1,0 +1,36 @@
+{
+  "name": "AGP Dashboard",
+  "short_name": "AGP-DB",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#212529",
+  "theme_color": "#212529",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icons/kivy-icon-48.png",
+      "type": "image/png",
+      "sizes": "48x48"
+    },
+    {
+      "src": "/static/icons/kivy-icon-64.png",
+      "type": "image/png",
+      "sizes": "64x64"
+    },
+    {
+      "src": "/static/icons/kivy-icon-128.png",
+      "type": "image/png",
+      "sizes": "128x128"
+    },
+    {
+      "src": "/static/icons/kivy-icon-256.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    },
+    {
+      "src": "/static/icons/kivy-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

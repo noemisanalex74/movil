@@ -1,0 +1,62 @@
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "agp-dashboard-web/venv", # Project specific
+    ".local",
+    ".cargo",
+    ".cache",
+    ".config",
+    ".npm",
+    ".pyenv",
+    "gemini-cli-patch",
+    "**/*.ipynb",
+    "stable-diffusion",
+    "stable-diffusion/src/taming-transformers",
+]
+
+# Same as Black.
+line-length = 88
+
+# Assume Python 3.12.
+target-version = "py312"
+
+[tool.ruff.lint]
+# Enable the pycodestyle (`E`) and Pyflakes (`F`) rules by default.
+select = ["E", "F", "W", "I"]
+ignore = []
+
+# Allow autofix for all enabled rules (when `--fix`) is used.
+fixable = ["A", "B", "C", "D", "E", "F", "I"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"agp-dashboard-web/app.py" = ["E402"]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false

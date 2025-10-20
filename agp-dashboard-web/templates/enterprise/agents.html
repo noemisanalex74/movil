@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Agentes de Empresa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">Agentes de Empresa Registrados</h1>
+    <p>Esta página muestra todos los agentes de empresa que se han registrado en el dashboard.</p>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Agentes</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>ID del Agente</th>
+                            <th>Estado</th>
+                            <th>Ubicación</th>
+                            <th>Última Conexión</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if agents %}
+                            {% for agent in agents %}
+                            <tr>
+                                <td><strong>{{ agent.name }}</strong></td>
+                                <td><code>{{ agent.agent_id }}</code></td>
+                                <td>
+                                    <span class="badge rounded-pill {% if agent.is_online %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if agent.is_online %}Online{% else %}Offline{% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ agent.location }}</td>
+                                <td>{{ agent.last_seen.strftime('%Y-%m-%d %H:%M:%S UTC') if agent.last_seen else 'Nunca' }}</td>
+                                <td>
+                                    <a href="{{ url_for('enterprise.agent_details', agent_id=agent.agent_id) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye-fill"></i> Ver Detalles
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">No hay agentes registrados.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

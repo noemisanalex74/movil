@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Empresas - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Gestión de Empresas</h1>
+
+<div id="empresas-table-container" class="card">
+    <div class="card-body">
+        <!-- El contenido se generará dinámicamente -->
+        <p class="text-center">Cargando empresas...</p>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('empresas-table-container');
+
+    const fetchAndRenderEmpresas = async () => {
+        try {
+            const response = await fetch("{{ url_for('api.get_empresas') }}");
+            const data = await response.json();
+            render(data.empresas);
+        } catch (error) {
+            container.innerHTML = '<div class="alert alert-danger">Error al cargar las empresas.</div>';
+            console.error("Fetch error:", error);
+        }
+    };
+
+    const render = (empresas) => {
+        if (!empresas || empresas.length === 0) {
+            container.innerHTML = '<div class="text-center p-5"><h3>No hay empresas registradas.</h3></div>';
+            return;
+        }
+
+        const rows = empresas.map(empresa => {
+            const detailUrl = `{{ url_for('enterprise.agent_details', agent_id=999) }}`.replace('999', empresa.id).replace('agent', 'empresa');
+            return `
+                <tr>
+                    <td>${empresa.nombre}</td>
+                    <td>${empresa.sector}</td>
+                    <td>${empresa.ubicacion}</td>
+                    <td>
+                        <a href="${detailUrl}" class="btn btn-sm btn-info">Detalles</a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        const tableHTML = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Sector</th>
+                            <th>Ubicación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = tableHTML;
+    };
+
+    fetchAndRenderEmpresas();
+});
+</script>
+{% endblock %}

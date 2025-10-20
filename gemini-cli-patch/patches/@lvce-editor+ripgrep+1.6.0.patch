@@ -1,0 +1,12 @@
+diff --git a/node_modules/@lvce-editor/ripgrep/src/downloadRipGrep.js b/node_modules/@lvce-editor/ripgrep/src/downloadRipGrep.js
+index f373ecf..ce32e14 100644
+--- a/node_modules/@lvce-editor/ripgrep/src/downloadRipGrep.js
++++ b/node_modules/@lvce-editor/ripgrep/src/downloadRipGrep.js
+@@ -40,6 +40,7 @@ const getTarget = () => {
+         default:
+           return 'i686-pc-windows-msvc.zip'
+       }
++    case 'android':
+     case 'linux':
+       switch (arch) {
+         case 'x64':

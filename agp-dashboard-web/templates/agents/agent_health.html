@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Salud de Agentes - AGP Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    .status-indicator {
+        height: 12px;
+        width: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
+    }
+    .status-online {
+        background-color: #28a745; /* Verde */
+    }
+    .status-offline {
+        background-color: #dc3545; /* Rojo */
+        animation: none; /* No queremos que los agentes offline pulsen */
+    }
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        }
+    }
+</style>
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Panel de Salud de Agentes</h1>
+    <p class="text-muted">Vista en tiempo real del estado de todos los agentes registrados.</p>
+
+    <div class="row">
+        {% for agent in agents %}
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <span class="status-indicator status-{{ agent.status }}" id="status-indicator-{{ agent.agent_id }}"></span>
+                        <strong id="status-text-{{ agent.agent_id }}" class="text-capitalize">{{ agent.status }}</strong>
+                    </h5>
+                    <i class="bi bi-hdd-network-fill text-muted"></i>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">{{ agent.name }}</h6>
+                    <p class="card-text text-muted small">ID: {{ agent.agent_id }}</p>
+                    <p class="card-text">{{ agent.description or 'Sin descripción.' }}</p>
+                </div>
+                <div class="card-footer text-muted small d-flex justify-content-between">
+                    <span><i class="bi bi-geo-alt-fill me-2"></i>{{ agent.location or 'Ubicación no especificada' }}</span>
+                    <span id="last-seen-{{ agent.agent_id }}"><i class="bi bi-clock-history me-2"></i>{{ agent.last_seen }}</span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                No hay agentes registrados en el sistema. Ve a "Agentes de Empresa" para añadir uno.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const socket = io("/agent");
+
+    socket.on('connect', function() {
+        console.log('Conectado al namespace de agentes para el panel de salud.');
+    });
+
+    socket.on('agent_status_update', function(data) {
+        console.log('Actualización de estado recibida:', data);
+        const agentId = data.agent_id;
+        const status = data.status;
+        const lastSeen = data.last_seen;
+
+        const statusIndicator = document.getElementById(`status-indicator-${agentId}`);
+        const statusText = document.getElementById(`status-text-${agentId}`);
+        const lastSeenText = document.getElementById(`last-seen-${agentId}`);
+
+        if (statusIndicator && statusText) {
+            statusIndicator.className = `status-indicator status-${status}`;
+            statusText.textContent = status;
+            if(lastSeenText && lastSeen) {
+                lastSeenText.innerHTML = `<i class="bi bi-clock-history me-2"></i>${lastSeen}`;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

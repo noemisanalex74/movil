@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Logs de Automatización{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Logs de Automatización</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Filtros y Búsqueda
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('agents.automation_logs') }}" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Buscar en Nombre/Salida</label>
+                    <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="agent_id" class="form-label">Filtrar por Agente</label>
+                    <select class="form-select" id="agent_id" name="agent_id">
+                        <option value="">Todos</option>
+                        {% for agent in unique_agents %}
+                            <option value="{{ agent }}" {% if agent == agent_filter %}selected{% endif %}>{{ agent }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Filtrar por Estado</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">Todos</option>
+                        {% for status in unique_statuses %}
+                            <option value="{{ status }}" {% if status == status_filter %}selected{% endif %}>{{ status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="type" class="form-label">Filtrar por Tipo</label>
+                    <select class="form-select" id="type" name="type">
+                        <option value="">Todos</option>
+                        {% for type in unique_types %}
+                            <option value="{{ type }}" {% if type == type_filter %}selected{% endif %}>{{ type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Aplicar Filtros</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if logs %}
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID Tarea</th>
+                    <th>Agente</th>
+                    <th>Tipo</th>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th>Fecha/Hora</th>
+                    <th>Salida</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr class="{% if log.status == 'failed' %}table-danger{% elif log.status == 'success' %}table-success{% endif %}">
+                    <td>{{ log.task_id[:8] }}...</td>
+                    <td>{{ log.agent_id[:8] }}...</td>
+                    <td>{{ log.type }}</td>
+                    <td>{{ log.name }}</td>
+                    <td><span class="badge {% if log.status == 'failed' %}bg-danger{% elif log.status == 'success' %}bg-success{% else %}bg-secondary{% endif %}">{{ log.status }}</span></td>
+                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#outputModal{{ log.id }}">
+                            Ver Salida
+                        </button>
+                        <!-- Modal -->
+                        <div class="modal fade" id="outputModal{{ log.id }}" tabindex="-1" aria-labelledby="outputModalLabel{{ log.id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="outputModalLabel{{ log.id }}">Salida de {{ log.name }} (Tarea: {{ log.task_id[:8] }}...)</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;">{{ log.output if log.output else 'No hay salida disponible.' }}</pre>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('agents.automation_logs', page=pagination.prev_num, search=search_query, agent_id=agent_filter, status=status_filter, type=type_filter) }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% for p in pagination.iter_pages() %}
+                {% if p %}
+                    <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('agents.automation_logs', page=p, search=search_query, agent_id=agent_filter, status=status_filter, type=type_filter) }}">{{ p }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('agents.automation_logs', page=pagination.next_num, search=search_query, agent_id=agent_filter, status=status_filter, type=type_filter) }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% else %}
+    <div class="text-center p-5 my-5 bg-body-tertiary rounded-3 border">
+        <svg width="150" height="150" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-4">
+            <style>
+                .base { fill: #24283b; }
+                .outline { stroke: #414868; stroke-width: 2; }
+                .text { fill: #545c7e; font-family: sans-serif; font-size: 14px; text-anchor: middle; }
+                .icon { stroke: #545c7e; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+            </style>
+            <rect class="base" width="200" height="200" rx="15"/>
+            <g transform="translate(50, 40)">
+                <path class="outline" d="M20,0 H80 C91.0457,0 100,8.9543 100,20 V90 C100,101.046 91.0457,110 80,110 H20 C8.9543,110 0,101.046 0,90 V20 C0,8.9543 8.9543,0 20,0 Z" fill="#1a1b26"/>
+                <circle class="icon" cx="45" cy="50" r="18"/>
+                <line class="icon" x1="58" y1="63" x2="75" y2="80"/>
+                <line class="icon" x1="20" y1="25" x2="80" y2="25"/>
+                <line class="icon" x1="20" y1="85" x2="60" y2="85"/>
+            </g>
+        </svg>
+        <h5 class="mt-4">No hay logs de automatización</h5>
+        <p class="text-muted">Cuando se ejecuten playbooks, sus logs aparecerán aquí.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

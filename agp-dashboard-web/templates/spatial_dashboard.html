@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGP - Navegación Espacial</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #1a1b26;
+        }
+        #render-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            outline: none;
+        }
+        #overlay-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        #overlay-content {
+            width: 90%;
+            height: 90%;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        #overlay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #24283b;
+            color: #c0caf5;
+            border-bottom: 1px solid #414868;
+            border-radius: 10px 10px 0 0;
+        }
+        #overlay-title {
+            font-weight: bold;
+        }
+        #overlay-close-btn {
+            background: none;
+            border: none;
+            color: #c0caf5;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        #overlay-iframe {
+            flex-grow: 1;
+            border: none;
+            border-radius: 0 0 10px 10px;
+        }
+        .label {
+            color: #c0caf5;
+            font-family: sans-serif;
+            padding: 5px 10px;
+            background: rgba(26, 27, 38, 0.7);
+            border-radius: 5px;
+            border: 1px solid #7aa2f7;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="render-canvas"></canvas>
+
+    <div id="overlay-container">
+        <div id="overlay-content">
+            <div id="overlay-header">
+                <span id="overlay-title">Dashboard</span>
+                <button id="overlay-close-btn">&times;</button>
+            </div>
+            <iframe id="overlay-iframe" src=""></iframe>
+        </div>
+    </div>
+
+    <!-- Import Three.js and Addons -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- Universe Data Structure ---
+        const universeData = {
+            root: {
+                name: 'Universo Principal',
+                cameraPos: new THREE.Vector3(0, 10, 50),
+                children: ['summary', 'tasks', 'enterprise', 'settings', 'lab']
+            },
+            summary: {
+                name: 'Dashboard',
+                parent: 'root',
+                action: { type: 'iframe', url: "{{ url_for('dashboard') }}" }
+            },
+            tasks: {
+                name: 'Tareas',
+                parent: 'root',
+                cameraPos: new THREE.Vector3(-20, 10, 50),
+                children: ['tasks_manager', 'kanban_tasks', 'task_form']
+            },
+            enterprise: {
+                name: 'Enterprise',
+                parent: 'root',
+                cameraPos: new THREE.Vector3(20, 10, 50),
+                children: ['empresas_manager', 'list_agents']
+            },
+            settings: {
+                name: 'Ajustes',
+                parent: 'root',
+                action: { type: 'iframe', url: "{{ url_for('settings.settings_manager') }}" }
+            },
+            lab: {
+                name: 'Lab 3D',
+                parent: 'root',
+                action: { type: 'iframe', url: "{{ url_for('threed_lab.lab') }}" }
+            },
+            // Task Sub-universe
+            tasks_manager: {
+                name: 'Administrar Tareas',
+                parent: 'tasks',
+                action: { type: 'iframe', url: "{{ url_for('tasks.tasks_manager') }}" }
+            },
+            kanban_tasks: {
+                name: 'Tablero Kanban',
+                parent: 'tasks',
+                action: { type: 'iframe', url: "{{ url_for('tasks.kanban_tasks') }}" }
+            },
+            task_form: {
+                name: 'Nueva Tarea',
+                parent: 'tasks',
+                action: { type: 'iframe', url: "{{ url_for('tasks.task_add') }}" }
+            },
+            // Enterprise Sub-universe
+            empresas_manager: {
+                name: 'Administrar Empresas',
+                parent: 'enterprise',
+                action: { type: 'iframe', url: "{{ url_for('tasks.empresas_manager') }}" }
+            },
+            list_agents: {
+                name: 'Ver Agentes',
+                parent: 'enterprise',
+                action: { type: 'iframe', url: "{{ url_for('enterprise.list_agents') }}" }
+            },
+        };
+
+        // --- Basic Setup ---
+        let currentUniverse = 'root';
+        let activeObjects = [];
+        let stars; // Para acceder a las estrellas en la animación
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000); // Far plane aumentado
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('render-canvas'), antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        document.body.appendChild(labelRenderer.domElement);
+
+        const controls = new OrbitControls(camera, labelRenderer.domElement);
+        controls.enableDamping = true;
+
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        directionalLight.position.set(5, 10, 7.5);
+        scene.add(directionalLight);
+
+        // --- Camera Animation ---
+        let targetPosition = null;
+        let targetLookAt = null;
+        let onAnimationComplete = null;
+
+        function animateCamera(position, lookAt, callback) {
+            targetPosition = position;
+            targetLookAt = lookAt;
+            onAnimationComplete = callback;
+            controls.enabled = false; // Disable controls during animation
+        }
+
+        // --- Universe Management ---
+        function clearScene() {
+            activeObjects.forEach(obj => {
+                scene.remove(obj);
+                if(obj.label) {
+                    obj.remove(obj.label); // remove label from object
+                }
+            });
+            activeObjects = [];
+        }
+
+        function buildUniverse(universeKey) {
+            clearScene();
+            const universe = universeData[universeKey];
+            const childrenKeys = universe.children || [];
+            const parentKey = universe.parent;
+
+            // Create planet for each child
+            childrenKeys.forEach((key, index) => {
+                const childData = universeData[key];
+                const angle = (index / childrenKeys.length) * Math.PI * 2;
+                const radius = childrenKeys.length > 1 ? 15 + (childrenKeys.length * 1.5) : 0;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+
+                const geometry = new THREE.IcosahedronGeometry(4, 1);
+                const material = new THREE.MeshStandardMaterial({
+                    color: childData.children ? 0x7aa2f7 : 0x9ece6a, // Blue for universes, Green for actions
+                    metalness: 0.8, roughness: 0.4, wireframe: true
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, 0, z);
+                mesh.userData = { key: key };
+                scene.add(mesh);
+                activeObjects.push(mesh);
+
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'label';
+                labelDiv.textContent = childData.name;
+                const label = new CSS2DObject(labelDiv);
+                label.position.set(0, 5.5, 0);
+                mesh.add(label);
+                mesh.label = label;
+            });
+
+            // Create 'Back' portal if not in root
+            if (parentKey) {
+                const geometry = new THREE.TorusGeometry(2, 0.5, 16, 100);
+                const material = new THREE.MeshStandardMaterial({ color: 0xf7768e, metalness: 0.8, roughness: 0.4 });
+                const backPortal = new THREE.Mesh(geometry, material);
+                backPortal.position.set(0, -15, 0);
+                backPortal.rotation.x = Math.PI / 2;
+                backPortal.userData = { key: parentKey, isBackPortal: true };
+                scene.add(backPortal);
+                activeObjects.push(backPortal);
+
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'label';
+                labelDiv.textContent = 'Volver a ' + universeData[parentKey].name;
+                const label = new CSS2DObject(labelDiv);
+                label.position.set(0, 2, 0);
+                backPortal.add(label);
+                backPortal.label = label;
+            }
+        }
+
+        // --- Raycasting for Interaction ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function onMouseClick(event) {
+            if (overlayContainer.style.display === 'flex' || targetPosition) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(activeObjects);
+
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+                const targetKey = clickedObject.userData.key;
+                const targetData = universeData[targetKey];
+
+                if (targetData.action) { // It's a leaf node
+                    // Navegación de página completa en lugar de overlay
+                    window.location.href = targetData.action.url;
+                } else { // It's another universe
+                    currentUniverse = targetKey;
+                    const cameraTargetPos = targetData.cameraPos || new THREE.Vector3(0, 0, 25);
+                    animateCamera(cameraTargetPos, new THREE.Vector3(0,0,0), () => {
+                        buildUniverse(currentUniverse);
+                        // Set camera to look at the new scene center from a default distance
+                        const newCameraPos = universeData[currentUniverse].cameraPos || new THREE.Vector3(0, 10, 50);
+                        camera.position.copy(newCameraPos);
+                        controls.target.set(0, 0, 0);
+                    });
+                }
+            }
+        }
+        window.addEventListener('click', onMouseClick);
+
+        // --- Overlay Logic ---
+        const overlayContainer = document.getElementById('overlay-container');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayIframe = document.getElementById('overlay-iframe');
+        const overlayCloseBtn = document.getElementById('overlay-close-btn');
+
+        function openOverlay(url, title) {
+            overlayIframe.src = url;
+            overlayTitle.textContent = title;
+            overlayContainer.style.display = 'flex';
+        }
+
+        function closeOverlay() {
+            overlayIframe.src = 'about:blank';
+            overlayContainer.style.display = 'none';
+        }
+        overlayCloseBtn.addEventListener('click', closeOverlay);
+
+        // --- Window Resize ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', onWindowResize);
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (targetPosition) {
+                camera.position.lerp(targetPosition, 0.05);
+                controls.target.lerp(targetLookAt, 0.05);
+                if (camera.position.distanceTo(targetPosition) < 0.1) {
+                    camera.position.copy(targetPosition);
+                    controls.target.copy(targetLookAt);
+                    targetPosition = null;
+                    targetLookAt = null;
+                    if (onAnimationComplete) {
+                        onAnimationComplete();
+                        onAnimationComplete = null;
+                    }
+                    controls.enabled = true;
+                }
+            }
+
+            controls.update();
+            activeObjects.forEach(obj => { 
+                if (obj.userData.isBackPortal) {
+                    obj.rotation.z += 0.01;
+                } else {
+                    obj.rotation.y += 0.005; 
+                }
+            });
+
+            // Animar el campo de estrellas
+            if (stars) {
+                stars.rotation.y += 0.0001;
+            }
+
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // --- Initial Build ---
+        function createStarfield() {
+            const starVertices = [];
+            for (let i = 0; i < 15000; i++) {
+                const x = THREE.MathUtils.randFloatSpread(2000);
+                const y = THREE.MathUtils.randFloatSpread(2000);
+                const z = THREE.MathUtils.randFloatSpread(2000);
+                starVertices.push(x, y, z);
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.25, // Aumentado para visibilidad
+                transparent: true,
+                opacity: 0.9
+            });
+            stars = new THREE.Points(starGeometry, starMaterial); // Asignar a la variable
+            scene.add(stars);
+        }
+
+        createStarfield();
+        buildUniverse(currentUniverse);
+        camera.position.copy(universeData.root.cameraPos);
+        controls.target.set(0, 0, 0);
+        animate();
+    </script>
+
+</body>
+</html>

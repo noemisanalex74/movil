@@ -1,0 +1,140 @@
+# dashboard.kv
+
+<DashboardScreen>:
+    orientation: 'vertical'
+    padding: 10
+    spacing: 10
+
+    ScrollView:
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_y: None
+            height: self.minimum_height
+            spacing: 10
+
+            Label:
+                text: '📊 Dashboard del Proyecto AGP CLI 📊'
+                font_size: '24sp'
+                size_hint_y: None
+                height: self.texture_size[1]
+                color: 0.1, 0.6, 0.9, 1 # Azul brillante
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
+                Label:
+                    text: '--- Información General ---'
+                    font_size: '18sp'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0.1, 0.8, 0.1, 1 # Verde
+                Label:
+                    text: root.general_info
+                    text_size: self.width, None
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: 'left'
+                    valign: 'top'
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
+                Label:
+                    text: '--- Estado de la IA y Configuración ---'
+                    font_size: '18sp'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0.1, 0.8, 0.1, 1 # Verde
+                Label:
+                    text: root.ai_config_info
+                    text_size: self.width, None
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: 'left'
+                    valign: 'top'
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
+                Label:
+                    text: '--- Preferencias del Usuario ---'
+                    font_size: '18sp'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0.1, 0.8, 0.1, 1 # Verde
+                Label:
+                    text: root.user_prefs_info
+                    text_size: self.width, None
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: 'left'
+                    valign: 'top'
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
+                Label:
+                    text: '--- Tareas Pendientes ---'
+                    font_size: '18sp'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0.1, 0.8, 0.1, 1 # Verde
+                Label:
+                    text: root.pending_tasks_info
+                    text_size: self.width, None
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: 'left'
+                    valign: 'top'
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
+                Label:
+                    text: '--- Herramientas Personalizadas (MCP) ---'
+                    font_size: '18sp'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0.1, 0.8, 0.1, 1 # Verde
+                Label:
+                    text: root.custom_tools_info
+                    text_size: self.width, None
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: 'left'
+                    valign: 'top'
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
+                Label:
+                    text: '--- Entornos Virtuales ---'
+                    font_size: '18sp'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0.1, 0.8, 0.1, 1 # Verde
+                Label:
+                    text: root.virtual_envs_info
+                    text_size: self.width, None
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: 'left'
+                    valign: 'top'
+
+    Button:
+        text: 'Actualizar Dashboard'
+        size_hint_y: None
+        height: '48dp'
+        on_press: root.update_dashboard()

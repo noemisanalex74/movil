@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Cargar Material para 3D{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Carga de Material (Entrada)</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('threed_lab.lab') }}">Laboratorio 3D</a></li>
+        <li class="breadcrumb-item active">Carga</li>
+    </ol>
+
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <i class="bi bi-google"></i>
+            Cargar Imágenes a Google Drive
+        </div>
+        <div class="card-body">
+            {% if config_missing %}
+            <div class="alert alert-warning text-center">
+                <h5 class="alert-heading">Configuración Requerida</h5>
+                <p>Faltan las Credenciales de Google. Por favor, ve a <a href="{{ url_for('settings.settings_manager') }}" class="alert-link">Ajustes</a> para configurar tu ID y Secreto de Cliente.</p>
+            </div>
+            {% elif not is_authenticated %}
+            <div class="alert alert-info text-center">
+                <h5 class="alert-heading">Autoriza el acceso a Google Drive</h5>
+                <p>Para subir archivos, primero necesitas dar permiso para acceder a tu Google Drive.</p>
+                <a href="{{ url_for('google_auth.authorize') }}" class="btn btn-primary">
+                    <i class="bi bi-google me-2"></i>Conectar con Google Drive
+                </a>
+            </div>
+            {% else %}
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="text-center">
+                        <h5 class="mb-3">Subir Imágenes a la Carpeta de Entrada</h5>
+                        <p class="small mb-3">Sube aquí las imágenes (<code>.jpg</code>, <code>.png</code>) que un proceso externo usará para generar los modelos 3D. Se guardarán en la carpeta <code>AGP_Dashboard/3D_Lab/Entrada</code> de tu Google Drive.</p>
+                    </div>
+                    <form action="{{ url_for('threed_lab.upload') }}" method="post" enctype="multipart/form-data" class="border rounded p-4">
+                        <div class="mb-3">
+                            <label for="image_files_input" class="form-label">Selecciona los archivos de imagen:</label>
+                            <input class="form-control" type="file" id="image_files_input" name="image_files" accept="image/*" multiple>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-cloud-arrow-up-fill"></i> Subir Imágenes a Drive</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

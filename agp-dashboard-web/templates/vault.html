@@ -1,0 +1,178 @@
+
+
+{% extends "base.html" %}
+
+{% block title %}Gestor de Secretos - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Gestor de Secretos (Vault)</h1>
+
+<!-- Add Secret Form -->
+<div class="card mb-4">
+    <div class="card-header">Añadir Nuevo Secreto</div>
+    <div class="card-body">
+        <form id="add-secret-form">
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <label for="secret-name" class="form-label">Nombre</label>
+                    <input type="text" id="secret-name" class="form-control" placeholder="Ej: API_KEY_STRIPE" required>
+                </div>
+                <div class="col-md-5 mb-3">
+                    <label for="secret-value" class="form-label">Valor</label>
+                    <input type="password" id="secret-value" class="form-control" placeholder="••••••••••••••••" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end mb-3">
+                    <button type="submit" class="btn btn-primary w-100">Añadir</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Secrets List -->
+<div class="card">
+    <div class="card-header">Secretos Almacenados</div>
+    <div class="card-body">
+        <ul class="list-group" id="secrets-list">
+            {% for secret in secrets %}
+            <li class="list-group-item d-flex justify-content-between align-items-center" data-secret-id="{{ secret.id }}">
+                <span class="font-monospace">{{ secret.name }}</span>
+                <div>
+                    <button class="btn btn-sm btn-info reveal-btn">Revelar</button>
+                    <button class="btn btn-sm btn-danger delete-btn">Eliminar</button>
+                </div>
+            </li>
+            {% else %}
+            <li id="no-secrets-placeholder" class="list-group-item text-center text-muted">No hay secretos guardados.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<!-- Reveal Secret Modal -->
+<div class="modal fade" id="revealSecretModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Contraseña</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Para revelar el secreto, por favor introduce tu contraseña de administrador.</p>
+                <form id="reveal-secret-form">
+                    <input type="hidden" id="reveal-secret-id">
+                    <div class="mb-3">
+                        <label for="admin-password" class="form-label">Contraseña</label>
+                        <input type="password" id="admin-password" class="form-control" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Revelar Secreto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addForm = document.getElementById('add-secret-form');
+    const secretsList = document.getElementById('secrets-list');
+    const revealModalEl = document.getElementById('revealSecretModal');
+    const revealModal = new bootstrap.Modal(revealModalEl);
+    const revealForm = document.getElementById('reveal-secret-form');
+
+    // --- Add Secret --- 
+    addForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const name = document.getElementById('secret-name').value;
+        const value = document.getElementById('secret-value').value;
+        const submitButton = addForm.querySelector('button[type="submit"]');
+
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch("{{ url_for('vault.add_secret') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, value })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast('Éxito', 'Secreto añadido.', 'success');
+                addForm.reset();
+                const newLi = document.createElement('li');
+                newLi.className = 'list-group-item d-flex justify-content-between align-items-center';
+                newLi.dataset.secretId = result.id;
+                newLi.innerHTML = `<span class="font-monospace">${result.name}</span><div><button class="btn btn-sm btn-info reveal-btn">Revelar</button> <button class="btn btn-sm btn-danger delete-btn">Eliminar</button></div>`;
+                secretsList.appendChild(newLi);
+                document.getElementById('no-secrets-placeholder')?.remove();
+            } else {
+                showToast('Error', result.error, 'danger');
+            }
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    // --- Event Delegation for Reveal/Delete ---
+    secretsList.addEventListener('click', function(e) {
+        const secretLi = e.target.closest('li');
+        if (!secretLi) return;
+        const secretId = secretLi.dataset.secretId;
+
+        // --- Delete Secret ---
+        if (e.target.classList.contains('delete-btn')) {
+            if (confirm('¿Estás seguro de que quieres eliminar este secreto? Esta acción es irreversible.')) {
+                fetch(`/api/vault/secrets/${secretId}`, { method: 'DELETE' })
+                    .then(response => {
+                        if (response.ok) {
+                            showToast('Éxito', 'Secreto eliminado.', 'success');
+                            secretLi.remove();
+                        } else {
+                            showToast('Error', 'No se pudo eliminar el secreto.', 'danger');
+                        }
+                    });
+            }
+        }
+
+        // --- Reveal Secret (Open Modal) ---
+        if (e.target.classList.contains('reveal-btn')) {
+            document.getElementById('reveal-secret-id').value = secretId;
+            revealModal.show();
+        }
+    });
+
+    // --- Handle Reveal Modal Submission ---
+    revealForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const secretId = document.getElementById('reveal-secret-id').value;
+        const password = document.getElementById('admin-password').value;
+        const submitButton = revealForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch(`/api/vault/secrets/${secretId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                revealModal.hide();
+                alert(`Valor del secreto: \n\n${result.value}`);
+            } else {
+                showToast('Error', result.error, 'danger');
+            }
+        } finally {
+            submitButton.disabled = false;
+            document.getElementById('admin-password').value = '';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,487 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AGP Dashboard API",
+    "version": "1.0.0",
+    "description": "API para la gestión de tareas y proyectos del AGP Dashboard."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Servidor local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Tareas",
+      "description": "Operaciones relacionadas con la gestión de tareas."
+    },
+    {
+      "name": "Proyectos",
+      "description": "Operaciones relacionadas con la gestión de proyectos."
+    }
+  ],
+  "paths": {
+    "/api/tasks": {
+      "get": {
+        "tags": ["Tareas"],
+        "summary": "Obtener una lista paginada de tareas",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Número de página",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Término de búsqueda para la descripción de la tarea",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "Campo por el cual ordenar (ej. fecha_modificacion, descripcion)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "fecha_modificacion"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Orden de clasificación (asc o desc)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de tareas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Task"
+                      }
+                    },
+                    "page": { "type": "integer" },
+                    "total_pages": { "type": "integer" },
+                    "total_tasks": { "type": "integer" },
+                    "sort_by": { "type": "string" },
+                    "sort_order": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Tareas"],
+        "summary": "Crear una nueva tarea",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["descripcion"],
+                "properties": {
+                  "descripcion": { "type": "string", "example": "Comprar leche" },
+                  "estado": { "type": "string", "enum": ["pendiente", "en_progreso", "completada"], "default": "pendiente" },
+                  "proyecto": { "type": "string", "example": "Compras del hogar" },
+                  "fecha_vencimiento": { "type": "string", "format": "date-time", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tarea creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Descripción de la tarea es requerida"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}": {
+      "put": {
+        "tags": ["Tareas"],
+        "summary": "Actualizar una tarea existente",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "description": "ID de la tarea a actualizar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descripcion": { "type": "string", "example": "Comprar pan y leche" },
+                  "estado": { "type": "string", "enum": ["pendiente", "en_progreso", "completada"] },
+                  "proyecto": { "type": "string", "example": "Compras del hogar" },
+                  "fecha_vencimiento": { "type": "string", "format": "date-time", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tarea actualizada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de actualización son requeridos"
+          },
+          "404": {
+            "description": "Tarea no encontrada"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Tareas"],
+        "summary": "Eliminar una tarea",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "description": "ID de la tarea a eliminar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarea eliminada exitosamente"
+          },
+          "404": {
+            "description": "Tarea no encontrada"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "tags": ["Proyectos"],
+        "summary": "Obtener una lista paginada de proyectos",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Número de página",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Término de búsqueda para el nombre o descripción del proyecto",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "Campo por el cual ordenar (ej. ultima_modificacion, nombre)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "ultima_modificacion"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Orden de clasificación (asc o desc)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de proyectos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "projects": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Project"
+                      }
+                    },
+                    "page": { "type": "integer" },
+                    "total_pages": { "type": "integer" },
+                    "total_projects": { "type": "integer" },
+                    "sort_by": { "type": "string" },
+                    "sort_order": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Proyectos"],
+        "summary": "Crear un nuevo proyecto",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nombre"],
+                "properties": {
+                  "nombre": { "type": "string", "example": "Proyecto Alpha" },
+                  "descripcion": { "type": "string", "example": "Descripción detallada del proyecto Alpha" },
+                  "ruta": { "type": "string", "example": "/home/user/projects/alpha" },
+                  "estado": { "type": "string", "enum": ["activo", "inactivo", "archivado"], "default": "activo" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Proyecto creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El nombre del proyecto es requerido"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}": {
+      "get": {
+        "tags": ["Proyectos"],
+        "summary": "Obtener un proyecto por su ID",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "description": "ID del proyecto a obtener",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalles del proyecto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proyecto no encontrado"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Proyectos"],
+        "summary": "Actualizar un proyecto existente",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "description": "ID del proyecto a actualizar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": { "type": "string", "example": "Proyecto Alpha v2" },
+                  "descripcion": { "type": "string", "example": "Descripción actualizada del proyecto Alpha" },
+                  "ruta": { "type": "string", "example": "/home/user/projects/alpha_v2" },
+                  "estado": { "type": "string", "enum": ["activo", "inactivo", "archivado"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Proyecto actualizado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de actualización son requeridos"
+          },
+          "404": {
+            "description": "Proyecto no encontrado"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Proyectos"],
+        "summary": "Eliminar un proyecto",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "description": "ID del proyecto a eliminar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proyecto eliminado exitosamente"
+          },
+          "404": {
+            "description": "Proyecto no encontrado"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "descripcion": { "type": "string" },
+          "estado": { "type": "string", "enum": ["pendiente", "en_progreso", "completada"] },
+          "proyecto": { "type": "string", "nullable": true },
+          "fecha_modificacion": { "type": "string", "format": "date-time", "readOnly": true },
+          "fecha_vencimiento": { "type": "string", "format": "date-time", "nullable": true }
+        },
+        "example": {
+          "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+          "descripcion": "Comprar víveres",
+          "estado": "pendiente",
+          "proyecto": "Hogar",
+          "fecha_modificacion": "2025-10-02T10:00:00.000000",
+          "fecha_vencimiento": "2025-10-03T18:00:00.000000"
+        }
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "nombre": { "type": "string" },
+          "descripcion": { "type": "string", "nullable": true },
+          "ruta": { "type": "string", "nullable": true },
+          "estado": { "type": "string", "enum": ["activo", "inactivo", "archivado"] },
+          "ultima_modificacion": { "type": "string", "format": "date-time", "readOnly": true }
+        },
+        "example": {
+          "id": "f1e2d3c4-b5a6-9876-5432-10fedcba9876",
+          "nombre": "Desarrollo App Móvil",
+          "descripcion": "Creación de la aplicación móvil para clientes",
+          "ruta": "/dev/app_movil",
+          "estado": "activo",
+          "ultima_modificacion": "2025-09-28T14:30:00.000000"
+        }
+      }
+    }
+  }
+}

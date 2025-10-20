@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{% block title %}Notificaciones Termux{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Enviar Notificación a Termux</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Resumen</a></li>
+        <li class="breadcrumb-item active">Notificaciones Termux</li>
+    </ol>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-bell me-1"></i>
+            Nueva Notificación
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('notifications.termux_notify') }}">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Título</label>
+                    <input type="text" class="form-control" id="title" name="title" placeholder="Título de la notificación (opcional)">
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label">Contenido</label>
+                    <textarea class="form-control" id="content" name="content" rows="3" placeholder="Escribe aquí el contenido de la notificación..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar Notificación</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+
+{% extends "base.html" %}
+
+{% block title %}Bitácora de Ubicaciones - AGP Dashboard{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    #map {
+        height: 75vh;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-solid);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Bitácora de Ubicaciones</h1>
+
+<div class="card">
+    <div class="card-body">
+        <div id="map"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const map = L.map('map').setView([51.505, -0.09], 13); // Default view
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    fetch("{{ url_for('location.api_locations') }}")
+        .then(response => response.json())
+        .then(locations => {
+            if (locations.length === 0) {
+                console.log("No location data to display.");
+                return;
+            }
+
+            const latLngs = [];
+
+            locations.forEach((loc, index) => {
+                const lat = loc.latitude;
+                const lng = loc.longitude;
+                const timestamp = new Date(loc.timestamp).toLocaleString('es-ES');
+                latLngs.push([lat, lng]);
+
+                const marker = L.marker([lat, lng]).addTo(map)
+                    .bindPopup(`<b>Ubicación #${index + 1}</b><br>Fecha: ${timestamp}<br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+                
+                // Center map on the last known location
+                if (index === locations.length - 1) {
+                    map.setView([lat, lng], 15);
+                }
+            });
+
+            // Draw a line connecting the points
+            const polyline = L.polyline(latLngs, {color: 'var(--primary-color)'}).addTo(map);
+
+            // Zoom the map to fit all points
+            if (locations.length > 1) {
+                map.fitBounds(polyline.getBounds());
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching location data:", error);
+            document.getElementById('map').innerHTML = '<div class="alert alert-danger">Error al cargar los datos de ubicación.</div>';
+        });
+});
+</script>
+{% endblock %}

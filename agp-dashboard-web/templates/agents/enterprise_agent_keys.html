@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de API Keys de Agentes Empresariales{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Gestión de API Keys de Agentes Empresariales</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Generar Nueva API Key
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('agents.enterprise_agent_keys') }}">
+                <input type="hidden" name="action" value="generate_new">
+                <div class="mb-3">
+                    <label for="agent_name" class="form-label">Nombre del Agente</label>
+                    <input type="text" class="form-control" id="agent_name" name="agent_name" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Generar API Key</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            API Keys Existentes
+        </div>
+        <div class="card-body">
+            {% if keys %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Agente</th>
+                            <th>API Key</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for name, key in keys.items() %}
+                        <tr>
+                            <td>{{ name }}</td>
+                            <td>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" value="{{ key }}" readonly id="key_{{ loop.index }}">
+                                    <button class="btn btn-outline-secondary copy-btn" type="button" data-clipboard-target="#key_{{ loop.index }}">Copiar</button>
+                                </div>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('agents.enterprise_agent_keys') }}" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta API Key?');" style="display:inline;">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="agent_name_to_delete" value="{{ name }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>No hay API Keys de agentes empresariales generadas aún.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.copy-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-clipboard-target');
+                var targetInput = document.querySelector(targetId);
+                targetInput.select();
+                document.execCommand('copy');
+                alert('API Key copiada al portapapeles.');
+            });
+        });
+    });
+</script>
+{% endblock %}

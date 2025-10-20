@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Laboratorio 3D - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Laboratorio 3D</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="bi bi-upload me-2"></i>Subir Vídeo para Escanear
+        </button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <a href="{{ url_for('threed_lab.interactive_spheres') }}" class="card-link">
+                <div class="card shadow h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-boxes" style="font-size: 3rem; color: var(--primary-color);"></i>
+                        <h5 class="card-title mt-3">Laboratorio de Esferas</h5>
+                        <p class="card-text">Un entorno 3D para interactuar con objetos.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Mis Proyectos 3D</h6>
+                </div>
+                <div class="card-body">
+                    {% if projects %}
+                        <div class="list-group">
+                            {% for project in projects %}
+                                <a href="{{ url_for('threed_lab.project_view', project_id=project.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ project.name }}</h6>
+                                        <small class="text-muted">ID: {{ project.id }}</small>
+                                    </div>
+                                    <span class="badge {% if project.status == 'Completado' %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">{{ project.status }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center p-5">
+                            <h4 class="text-muted">Aún no hay proyectos 3D.</h4>
+                            <p class="text-muted">Usa el botón "Subir Vídeo" para empezar a crear tu primer modelo 3D a partir de la realidad.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadModalLabel">Crear Nuevo Proyecto 3D</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Elige el método que prefieras para crear tu modelo 3D:</p>
+        <div class="d-grid gap-3">
+            <button class="btn btn-outline-primary p-3" data-bs-toggle="modal" data-bs-target="#uploadVideoModal">
+                <div class="fw-bold"><i class="bi bi-camera-reels-fill me-2"></i>Reconstruir desde Vídeo</div>
+                <small class="text-muted">Lento pero preciso. Ideal para objetos reales.</small>
+            </button>
+            <button class="btn btn-outline-info p-3 disabled" title="Próximamente">
+                <div class="fw-bold"><i class="bi bi-image-fill me-2"></i>Generar desde Foto (IA)</div>
+                <small class="text-muted">Rápido e interpretativo. Ideal para conceptos.</small>
+            </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Video Modal (replaces the old Upload Modal) -->
+<div class="modal fade" id="uploadVideoModal" tabindex="-1" aria-labelledby="uploadVideoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadVideoModalLabel">Reconstruir desde Vídeo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('threed_lab.upload_video') }}" method="POST" enctype="multipart/form-data">
+          <div class="modal-body">
+                <div class="mb-3">
+                    <label for="project_name" class="form-label">Nombre del Proyecto</label>
+                    <input type="text" class="form-control" id="project_name" name="project_name" placeholder="Ej: Escaneo de mi taza" required>
+                </div>
+                <div class="mb-3">
+                    <label for="video_file" class="form-label">Archivo de Vídeo (.mp4, .mov)</label>
+                    <input class="form-control" type="file" id="video_file" name="video_file" accept="video/*" required>
+                </div>
+                <div class="form-text">Graba un vídeo de 30-60 segundos caminando lentamente alrededor del objeto, asegurándote de capturar todos los ángulos.</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Crear Proyecto y Subir</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">{{ title }}</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            Detalles del Usuario
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Nombre de Usuario:</label>
+                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" {% if user.id %}readonly{% endif %} required>
+                    {% if user.id %}<small class="form-text text-muted">El nombre de usuario no se puede cambiar.</small>{% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Contraseña:</label>
+                    <input type="password" class="form-control" id="password" name="password" {% if not user.id %}required{% endif %}>
+                    {% if user.id %}<small class="form-text text-muted">Deja en blanco para mantener la contraseña actual.</small>{% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="role" class="form-label">Rol:</label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="Admin" {% if user.role == 'Admin' %}selected{% endif %}>Admin</option>
+                        <option value="Operador" {% if user.role == 'Operador' %}selected{% endif %}>Operador</option>
+                        <option value="Visor" {% if user.role == 'Visor' %}selected{% endif %}>Visor</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar Usuario</button>
+                <a href="{{ url_for('user_manager') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

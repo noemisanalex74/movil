@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ title }}</h1>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="nombre" class="form-label">Nombre de la Empresa:</label>
+        <input type="text" id="nombre" name="nombre" value="{{ empresa.get('nombre', '') }}" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="contacto" class="form-label">Persona de Contacto:</label>
+        <input type="text" id="contacto" name="contacto" value="{{ empresa.get('contacto', '') }}" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Email:</label>
+        <input type="email" id="email" name="email" value="{{ empresa.get('email', '') }}" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label for="telefono" class="form-label">Teléfono:</label>
+        <input type="tel" id="telefono" name="telefono" value="{{ empresa.get('telefono', '') }}" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label for="notas" class="form-label">Notas:</label>
+        <textarea id="notas" name="notas" class="form-control" rows="3">{{ empresa.get('notas', '') }}</textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="direccion" class="form-label">Dirección:</label>
+        <textarea id="direccion" name="direccion" class="form-control" rows="2">{{ empresa.get('direccion', '') }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label for="sitio_web" class="form-label">Sitio Web:</label>
+        <input type="url" id="sitio_web" name="sitio_web" value="{{ empresa.get('sitio_web', '') }}" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label for="industria" class="form-label">Industria:</label>
+        <input type="text" id="industria" name="industria" value="{{ empresa.get('industria', '') }}" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label for="estado_cliente" class="form-label">Estado del Cliente:</label>
+        <select id="estado_cliente" name="estado_cliente" class="form-select">
+            <option value="Potencial" {% if empresa.get('estado_cliente') == 'Potencial' %}selected{% endif %}>Potencial</option>
+            <option value="Activo" {% if empresa.get('estado_cliente') == 'Activo' %}selected{% endif %}>Activo</option>
+            <option value="Inactivo" {% if empresa.get('estado_cliente') == 'Inactivo' %}selected{% endif %}>Inactivo</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{{ url_for('empresas_manager') }}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

@@ -1,0 +1,14 @@
+[
+    {
+        "id": "test_log_playbook",
+        "name": "Test: Escribir en Log",
+        "description": "Un playbook simple que escribe la fecha actual en un archivo de log para probar el programador.",
+        "steps": [
+            {
+                "type": "shell",
+                "command": "echo 'Prueba del programador ejecutada a las $(date)' >> /data/data/com.termux/files/home/test_log.txt",
+                "agent_id": "local"
+            }
+        ]
+    }
+]

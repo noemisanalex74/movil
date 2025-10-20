@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Gestor de Agentes - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-gray-800">Gestor de Agentes</h1>
+    <p class="mb-4">
+        Aquí puedes ver el estado de todos los agentes remotos y enviarles comandos. 
+        El estado se actualiza en tiempo real.
+    </p>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Agentes Registrados</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="agentsTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                            <th>RAM</th>
+                            <th>Disco</th>
+                            <th>CPU (1m)</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for agent in agents %}
+                        <tr id="agent-{{ agent.agent_id }}">
+                            <td>
+                                <strong>{{ agent.name }}</strong><br>
+                                <small class="text-muted"><code>{{ agent.agent_id }}</code></small>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill {% if agent.status == 'online' %}bg-success{% else %}bg-danger{% endif %}" id="status-{{ agent.agent_id }}">
+                                    {{ agent.status }}
+                                </span>
+                            </td>
+                            <td id="agent-ram-{{ agent.agent_id }}" style="width: 15%;">
+                                <div class="progress" title="Uso de RAM">
+                                    <div class="progress-bar bg-info" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">-</div>
+                                </div>
+                            </td>
+                            <td id="agent-disk-{{ agent.agent_id }}" style="width: 15%;">
+                                <div class="progress" title="Uso de Disco">
+                                    <div class="progress-bar bg-info" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">-</div>
+                                </div>
+                            </td>
+                            <td id="agent-cpu-{{ agent.agent_id }}" class="text-center">
+                                <span class="badge bg-secondary">-</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-primary btn-sm command-btn" 
+                                        data-agent-id="{{ agent.agent_id }}" 
+                                        data-agent-name="{{ agent.name }}"
+                                        {% if agent.status != 'online' %}disabled{% endif %}>
+                                    <i class="bi bi-terminal"></i> Enviar Comando
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Command Modal -->
+<div class="modal fade" id="commandModal" tabindex="-1" aria-labelledby="commandModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="commandModalLabel">Enviar Comando a: <span id="modalAgentName"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="commandForm">
+          <input type="hidden" id="modalAgentId" name="agent_id">
+          <div class="mb-3">
+            <label for="commandInput" class="form-label">Comando</label>
+            <input type="text" class="form-control" id="commandInput" name="command" placeholder="Ej: list_files" required>
+            <small class="form-text text-muted">Introduce el nombre del comando permitido (ej. list_files, show_disk_space).</small>
+          </div>
+          <button type="submit" class="btn btn-primary">Enviar</button>
+        </form>
+        <hr>
+        <h6>Resultado:</h6>
+        <pre id="commandResult" class="bg-dark text-white p-2 rounded" style="min-height: 100px;"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const socket = io(); // Connect to the default namespace for UI updates
+
+    socket.on('connect', function() {
+        console.log('Connected to dashboard for UI updates.');
+    });
+
+    socket.on('agent_status_update', function(data) {
+        console.log('Received agent status update:', data);
+        const statusBadge = document.getElementById(`status-${data.agent_id}`);
+        const commandButton = document.querySelector(`.command-btn[data-agent-id="${data.agent_id}"]`);
+
+        if (statusBadge) {
+            statusBadge.textContent = data.status;
+            if (data.status === 'online') {
+                statusBadge.classList.remove('bg-danger');
+                statusBadge.classList.add('bg-success');
+                if(commandButton) commandButton.disabled = false;
+            } else {
+                statusBadge.classList.remove('bg-success');
+                statusBadge.classList.add('bg-danger');
+                if(commandButton) commandButton.disabled = true;
+            }
+        }
+    });
+
+    // Command Modal Logic
+    const commandModal = new bootstrap.Modal(document.getElementById('commandModal'));
+    const modalAgentName = document.getElementById('modalAgentName');
+    const modalAgentId = document.getElementById('modalAgentId');
+    const commandResult = document.getElementById('commandResult');
+    const commandForm = document.getElementById('commandForm');
+    const commandInput = document.getElementById('commandInput');
+
+    document.querySelectorAll('.command-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const agentId = this.dataset.agentId;
+            const agentName = this.dataset.agentName;
+            
+            modalAgentName.textContent = agentName;
+            modalAgentId.value = agentId;
+            commandResult.textContent = '';
+            commandInput.value = '';
+            
+            commandModal.show();
+        });
+    });
+
+    commandForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const agentId = modalAgentId.value;
+        const command = commandInput.value;
+
+        commandResult.textContent = `Enviando comando '${command}' al agente...`;
+
+        // We use a standard HTTP request to our own server, which then uses Socket.IO to talk to the agent.
+        fetch("{{ url_for('agents.agent_command') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'agent_id': agentId,
+                'command': command
+            })
+        })
+        .then(response => {
+            // This response is from our Flask server, not the agent directly.
+            // We just need to know if the command was successfully dispatched.
+            // The actual result will come via a WebSocket event.
+            console.log('Command dispatch response:', response);
+            commandResult.textContent = 'Comando enviado. Esperando resultado...';
+        })
+        .catch(error => {
+            console.error('Error dispatching command:', error);
+            commandResult.textContent = 'Error al enviar el comando al servidor.';
+        });
+    });
+
+    // Listen for the result from the agent
+    socket.on('command_result_update', function(data) {
+        console.log('Received command result:', data);
+        // Check if the modal is open and the result is for the currently selected agent
+        if (commandModal._isShown && modalAgentId.value === data.agent_id) {
+            commandResult.textContent = data.output;
+        }
+        // You can also show a toast notification for results
+        showToast(`Resultado de ${data.agent_id}`, `Tarea ${data.task_id} ${data.status}.`, data.status === 'success' ? 'success' : 'danger');
+    });
+
+    // --- Agent Health Monitoring ---
+    const agentSocket = io("/agent");
+
+    agentSocket.on('connect', function() {
+        console.log('Connected to /agent namespace for health checks.');
+    });
+
+    function requestAgentHealth(agentId) {
+        console.log(`Requesting health for ${agentId}`);
+        agentSocket.emit('request_health', { agent_id: agentId });
+    }
+
+    function updateHealthUI(agentId, health) {
+        if (!health) return;
+
+        // RAM
+        const ramCell = document.getElementById(`agent-ram-${agentId}`);
+        if (ramCell && health.ram_percent !== undefined && health.ram_percent >= 0) {
+            const progressBar = ramCell.querySelector('.progress-bar');
+            const ramPercent = Math.round(health.ram_percent);
+            progressBar.style.width = `${ramPercent}%`;
+            progressBar.textContent = `${ramPercent}%`;
+            progressBar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-info');
+            if (ramPercent > 90) progressBar.classList.add('bg-danger');
+            else if (ramPercent > 75) progressBar.classList.add('bg-warning');
+            else progressBar.classList.add('bg-success');
+        }
+
+        // Disk
+        const diskCell = document.getElementById(`agent-disk-${agentId}`);
+        if (diskCell && health.disk_percent !== undefined && health.disk_percent >= 0) {
+            const progressBar = diskCell.querySelector('.progress-bar');
+            const diskPercent = Math.round(health.disk_percent);
+            progressBar.style.width = `${diskPercent}%`;
+            progressBar.textContent = `${diskPercent}%`;
+            progressBar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-info');
+            if (diskPercent > 90) progressBar.classList.add('bg-danger');
+            else if (diskPercent > 75) progressBar.classList.add('bg-warning');
+            else progressBar.classList.add('bg-success');
+        }
+
+        // CPU
+        const cpuCell = document.getElementById(`agent-cpu-${agentId}`);
+        if (cpuCell && health.cpu_load_1m !== undefined && health.cpu_load_1m >= 0) {
+            const badge = cpuCell.querySelector('.badge');
+            badge.textContent = health.cpu_load_1m.toFixed(2);
+            badge.classList.remove('bg-secondary', 'bg-success', 'bg-warning', 'bg-danger');
+            if (health.cpu_load_1m > 5) badge.classList.add('bg-danger');
+            else if (health.cpu_load_1m > 2) badge.classList.add('bg-warning');
+            else badge.classList.add('bg-success');
+        }
+    }
+
+    agentSocket.on('health_update', function(data) {
+        console.log('Received health update:', data);
+        updateHealthUI(data.agent_id, data.health);
+    });
+
+    // Periodically request health for online agents
+    setInterval(() => {
+        document.querySelectorAll('#agentsTable .badge.bg-success').forEach(badge => {
+            if (badge.textContent.trim() === 'online') {
+                const agentId = badge.id.replace('status-', '');
+                requestAgentHealth(agentId);
+            }
+        });
+    }, 15000);
+});
+</script>
+{% endblock %}

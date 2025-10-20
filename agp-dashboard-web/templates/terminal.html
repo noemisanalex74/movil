@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Terminal Integrada - AGP Dashboard{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+<style>
+    #terminal-container {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Terminal Integrada</h1>
+<div id="terminal-container" style="height: 600px;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+    const term = new Terminal({
+        cursorBlink: true,
+        macOptionIsMeta: true,
+        scrollback: 1000,
+        theme: {
+            background: '#21252b',
+            foreground: '#abb2bf',
+            cursor: '#61afef',
+            selection: 'rgba(97, 175, 239, 0.3)'
+        }
+    });
+    const terminalContainer = document.getElementById('terminal-container');
+    term.open(terminalContainer);
+
+    const socket = io();
+
+    socket.on('connect', () => {
+        term.write('Conectado a la terminal.\r\n');
+    });
+
+    socket.on('output', (data) => {
+        term.write(data.output);
+    });
+
+    term.onData((data) => {
+        socket.emit('input', { input: data });
+    });
+
+    // Ajustar el tamaño de la terminal al contenedor
+    const fitTerminal = () => {
+        term.fit();
+    };
+
+    window.addEventListener('resize', fitTerminal);
+    fitTerminal(); // Ajustar al cargar
+</script>
+{% endblock %}

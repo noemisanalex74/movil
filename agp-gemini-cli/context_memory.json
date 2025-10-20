@@ -1,0 +1,25 @@
+{
+  "preferencias": {
+    "idioma": "es",
+    "enfoque": "automatizaci\u00f3n empresarial",
+    "estilo": "r\u00e1pido, directo, profesional",
+    "tecnologias_preferidas": [
+      "Python",
+      "n8n",
+      "Telegram",
+      "Firebase"
+    ]
+  },
+  "\u00faltimos_comandos": [
+    "Termux:API is not yet available on Google Play - see https://github.com/termux-play-store/termux-apps/issues/29 for updates",
+    "G\u00e9minis escucha me escuchas G\u00e9minis",
+    "hola G\u00e9minis",
+    "hola G\u00e9minis quiero interactuar contigo mucho mejor poderte interrumpir",
+    "quiero a todas",
+    "quiero actualizar",
+    "que empieza con algo de la lista",
+    "s\u00ed me parece bien",
+    "l8n"
+  ],
+  "acciones_creadas": []
+}

@@ -1,0 +1,30 @@
+{
+    "playbook_id": "example_flow_control",
+    "name": "Ejemplo de Control de Flujo",
+    "description": "Demuestra el uso de bucles (loop) y condiciones (when).",
+    "variables": {
+        "archivos": ["archivo1.txt", "archivo2.txt", "archivo3.txt"]
+    },
+    "steps": [
+        {
+            "step_id": "step1_loop",
+            "name": "Bucle de Echo",
+            "type": "shell",
+            "command": "echo 'Procesando {{ item }}...'",
+            "loop": "{{ vars.archivos }}"
+        },
+        {
+            "step_id": "step2_fail",
+            "name": "Comando que falla",
+            "type": "shell",
+            "command": "ls /directorio/inexistente"
+        },
+        {
+            "step_id": "step3_conditional",
+            "name": "Paso Condicional",
+            "type": "shell",
+            "command": "echo 'El paso anterior ha fallado, tal como se esperaba.'",
+            "when": "'failed' in steps.step2_fail.status"
+        }
+    ]
+}

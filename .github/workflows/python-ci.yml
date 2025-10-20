@@ -68,23 +68,44 @@ jobs:
           python-version: "3.12"
       - name: Install Poetry
         uses: snok/install-poetry@v1
-      - name: Install linting tools (dashboard)
+
+      - name: Install dev dependencies (dashboard)
         run: poetry install --with dev --no-interaction
         working-directory: ./agp-dashboard-web
-      - name: Run flake8 (dashboard)
-        run: poetry run flake8 .
+      - name: Run Ruff check (dashboard)
+        run: poetry run ruff check .
         working-directory: ./agp-dashboard-web
-      - name: Install linting tools (cli) # NEW STEP
+      - name: Run Ruff format check (dashboard)
+        run: poetry run ruff format . --check
+        working-directory: ./agp-dashboard-web
+      - name: Run MyPy (dashboard)
+        run: poetry run mypy .
+        working-directory: ./agp-dashboard-web
+
+      - name: Install dev dependencies (cli)
         run: poetry install --with dev --no-interaction
         working-directory: ./agp-gemini-cli
-      - name: Run flake8 (cli) # NEW STEP
-        run: poetry run flake8 .
+      - name: Run Ruff check (cli)
+        run: poetry run ruff check .
         working-directory: ./agp-gemini-cli
-      - name: Install linting tools (agent) # NEW STEP
+      - name: Run Ruff format check (cli)
+        run: poetry run ruff format . --check
+        working-directory: ./agp-gemini-cli
+      - name: Run MyPy (cli)
+        run: poetry run mypy .
+        working-directory: ./agp-gemini-cli
+
+      - name: Install dev dependencies (agent)
         run: poetry install --with dev --no-interaction
         working-directory: ./agp-enterprise-agent
-      - name: Run flake8 (agent) # NEW STEP
-        run: poetry run flake8 .
+      - name: Run Ruff check (agent)
+        run: poetry run ruff check .
+        working-directory: ./agp-enterprise-agent
+      - name: Run Ruff format check (agent)
+        run: poetry run ruff format . --check
+        working-directory: ./agp-enterprise-agent
+      - name: Run MyPy (agent)
+        run: poetry run mypy .
         working-directory: ./agp-enterprise-agent
 
   build-docs:

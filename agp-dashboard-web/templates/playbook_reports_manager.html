@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Informes de Ejecución de Playbooks{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Informes de Ejecución de Playbooks</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            Historial de Ejecuciones
+        </div>
+        <div class="card-body">
+            {% if runs %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID de Ejecución</th>
+                            <th>Playbook</th>
+                            <th>Agente Destino</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>Duración</th>
+                            <th>Estado</th>
+                            <th>Log</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                        <tr>
+                            <td>{{ run.id }}</td>
+                            <td>{{ run.playbook_name }}</td>
+                            <td>{{ run.target_agent_id }}</td>
+                            <td>{{ run.start_time.strftime('%Y-%m-%d %H:%M:%S') if run.start_time else 'N/A' }}</td>
+                            <td>{{ run.end_time.strftime('%Y-%m-%d %H:%M:%S') if run.end_time else 'N/A' }}</td>
+                            <td>
+                                {% if run.start_time and run.end_time %}
+                                    {% set duration = (run.end_time - run.start_time).total_seconds() %}
+                                    {{ "%.2f"|format(duration) }} segundos
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-{{ 'success' if run.status == 'completed' else ('danger' if run.status == 'failed' else 'warning') }}">{{ run.status }}</span></td>
+                            <td>
+                                {% if run.log_output %}
+                                <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#logModal{{ run.id }}">
+                                    Ver Log
+                                </button>
+
+                                <!-- Log Modal -->
+                                <div class="modal fade" id="logModal{{ run.id }}" tabindex="-1" aria-labelledby="logModalLabel{{ run.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="logModalLabel{{ run.id }}">Log de Ejecución - Playbook: {{ run.playbook_name }} (ID: {{ run.id }})</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="log-viewer" style="max-height: 400px; overflow-y: scroll;">
+                                                    {% if run.log_output %}
+                                                        {% set structured_log = run.log_output | from_json %} {# Deserializar el JSON #}
+                                                        {% for entry in structured_log %}
+                                                            <div class="log-entry mb-2 p-2 rounded {% if entry.status == 'failed' %}bg-danger text-white{% elif entry.status == 'success' %}bg-success text-white{% elif entry.status == 'warning' %}bg-warning text-dark{% else %}bg-light text-dark{% endif %}">
+                                                                <strong>[{{ entry.timestamp }}]</strong> 
+                                                                {% if entry.type == 'info' %}<i class="bi bi-info-circle-fill me-1"></i>{% endif %}
+                                                                {% if entry.type == 'command_result' %}<i class="bi bi-terminal-fill me-1"></i>{% endif %}
+                                                                {% if entry.type == 'file_transfer_result' %}<i class="bi bi-file-earmark-arrow-up-fill me-1"></i>{% endif %}
+                                                                {% if entry.type == 'error' %}<i class="bi bi-x-circle-fill me-1"></i>{% endif %}
+                                                                {% if entry.type == 'warning' %}<i class="bi bi-exclamation-triangle-fill me-1"></i>{% endif %}
+                                                                <strong>{{ entry.message }}</strong>
+                                                                {% if entry.output %}<pre class="mt-1 mb-0 small text-break">{{ entry.output }}</pre>{% endif %}
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <p class="text-muted">No hay logs detallados disponibles.</p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                    No disponible
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No hay informes de ejecución de playbooks disponibles.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

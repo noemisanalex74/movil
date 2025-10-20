@@ -1,0 +1,56 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Repositorios de GitHub - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Mis Repositorios de GitHub</h1>
+        <a href="https://github.com/new" target="_blank" class="btn btn-sm btn-primary shadow-sm">
+            <i class="bi bi-plus-circle-fill me-1"></i> Crear Nuevo Repositorio
+        </a>
+    </div>
+
+    {% if repos is not none %}
+        <div class="row">
+            {% for repo in repos %}
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ repo.html_url }}" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-journal-bookmark-fill me-2"></i>{{ repo.name }}
+                            </a>
+                        </h5>
+                        <p class="card-text text-muted small mb-3">
+                            {{ repo.description or 'Sin descripción.' }}
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-primary me-2">{{ repo.language or 'N/A' }}</span>
+                                <span class="me-3" title="Estrellas"><i class="bi bi-star-fill text-warning me-1"></i>{{ repo.stargazers_count }}</span>
+                                <span title="Forks"><i class="bi bi-diagram-3-fill text-info me-1"></i>{{ repo.forks_count }}</span>
+                            </div>
+                            <small class="text-muted" title="Último push">{{ repo.pushed_at.split('T')[0] }}</small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0">
+                         <a href="{{ repo.html_url }}/issues" target="_blank" class="btn btn-sm btn-outline-secondary me-1">Issues ({{ repo.open_issues_count }})</a>
+                         <a href="{{ repo.html_url }}/pulls" target="_blank" class="btn btn-sm btn-outline-secondary">Pull Requests</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        {# This block is shown if repos is None, which happens on API error or if token is not set #}
+        {# Flash messages will be displayed at the top from base.html #}
+        <div class="text-center mt-5">
+            <p class="lead">No se pudieron cargar los repositorios.</p>
+            <p>Asegúrate de que tu Token de GitHub esté configurado correctamente en la página de <a href="{{ url_for('settings.settings_manager') }}">Ajustes</a>.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

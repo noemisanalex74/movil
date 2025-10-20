@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Resultados de Búsqueda - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Resultados de Búsqueda</h1>
+    <p class="text-muted">Mostrando resultados para: <strong>"{{ query }}"</strong></p>
+
+    {% if not results.tareas and not results.proyectos and not results.agents %}
+        <div class="text-center p-5 my-5 bg-body-tertiary rounded-3 border">
+            <svg width="150" height="150" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-4">
+                <style>
+                    .base { fill: #24283b; }
+                    .outline { stroke: #414868; stroke-width: 2; }
+                    .text { fill: #545c7e; font-family: sans-serif; font-size: 14px; text-anchor: middle; }
+                    .icon { stroke: #545c7e; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+                </style>
+                <rect class="base" width="200" height="200" rx="15"/>
+                <g transform="translate(50, 40)">
+                    <path class="outline" d="M20,0 H80 C91.0457,0 100,8.9543 100,20 V90 C100,101.046 91.0457,110 80,110 H20 C8.9543,110 0,101.046 0,90 V20 C0,8.9543 8.9543,0 20,0 Z" fill="#1a1b26"/>
+                    <circle class="icon" cx="45" cy="50" r="18"/>
+                    <line class="icon" x1="58" y1="63" x2="75" y2="80"/>
+                    <line class="icon" x1="20" y1="25" x2="80" y2="25"/>
+                    <line class="icon" x1="20" y1="85" x2="60" y2="85"/>
+                </g>
+            </svg>
+            <h3 class="mt-4">No se encontraron resultados</h3>
+            <p class="lead text-muted">No hemos encontrado nada que coincida con "<strong>{{ query }}</strong>".</p>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary mt-3">Volver al Dashboard</a>
+        </div>
+    {% else %}
+        <!-- Resultados en Tareas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-list-check me-2"></i>Resultados en Tareas ({{ results.tareas|length }})
+            </div>
+            <div class="card-body">
+                {% if results.tareas %}
+                    <ul class="list-group list-group-flush">
+                        {% for tarea in results.tareas %}
+                            <li class="list-group-item">
+                                <a href="{{ url_for('tasks.task_edit', task_id=tarea.id) }}" class="text-decoration-none">{{ tarea.descripcion }}</a>
+                                <span class="badge bg-secondary float-end">{{ tarea.estado }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center p-4">
+                        <p class="text-muted mb-0">No se encontraron tareas que coincidan con la búsqueda.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Resultados en Proyectos -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-folder-fill me-2"></i>Resultados en Proyectos ({{ results.proyectos|length }})
+            </div>
+            <div class="card-body">
+                {% if results.proyectos %}
+                    <ul class="list-group list-group-flush">
+                        {% for proyecto in results.proyectos %}
+                            <li class="list-group-item">
+                                <a href="#" class="text-decoration-none">{{ proyecto.nombre }}</a> <!-- Enlace a detalle de proyecto (si existe) -->
+                                <p class="small text-muted mb-0">{{ proyecto.descripcion }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center p-4">
+                        <p class="text-muted mb-0">No se encontraron proyectos que coincidan con la búsqueda.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Resultados en Agentes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-hdd-network-fill me-2"></i>Resultados en Agentes ({{ results.agents|length }})
+            </div>
+            <div class="card-body">
+                {% if results.agents %}
+                    <ul class="list-group list-group-flush">
+                        {% for agent in results.agents %}
+                            <li class="list-group-item">
+                                <a href="{{ url_for('agents.list_agents') }}" class="text-decoration-none">{{ agent.name }}</a>
+                                <p class="small text-muted mb-0">{{ agent.description }} - {{ agent.location }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center p-4">
+                        <p class="text-muted mb-0">No se encontraron agentes que coincidan con la búsqueda.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}

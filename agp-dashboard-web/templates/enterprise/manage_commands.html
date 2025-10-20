@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Gestionar Comandos - {{ agent_id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">Gestionar Comandos Permitidos</h1>
+    <p>Agente: <strong class="text-primary">{{ agent_id }}</strong> ({{ agent.ip }}:{{ agent.port }})</p>
+    <a href="{{ url_for('enterprise.agent_details', agent_id=agent_id) }}" class="btn btn-secondary mb-3">
+        <i class="fas fa-arrow-left"></i> Volver a los detalles del agente
+    </a>
+
+    <!-- Añadir Nuevo Comando -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Añadir Nuevo Comando</h6>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('enterprise.manage_agent_commands', agent_id=agent_id) }}">
+                <input type="hidden" name="action" value="add">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="name" class="form-label">Nombre Corto (ID)</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="ej: listar_home" required>
+                    </div>
+                    <div class="col-md-5 mb-3">
+                        <label for="command" class="form-label">Comando Completo</label>
+                        <input type="text" class="form-control" id="command" name="command" placeholder="ej: ls -l /home/user" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <input type="text" class="form-control" id="description" name="description" placeholder="ej: Lista los archivos en home" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Añadir Comando
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Comandos Existentes -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Comandos Permitidos Actuales</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Nombre (ID)</th>
+                            <th>Comando</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if commands %}
+                            {% for cmd in commands %}
+                            <tr>
+                                <td>{{ cmd.name }}</td>
+                                <td><code>{{ cmd.command }}</code></td>
+                                <td>{{ cmd.description }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('enterprise.manage_agent_commands', agent_id=agent_id) }}" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este comando?');">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="name" value="{{ cmd.name }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-trash"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center">No hay comandos permitidos configurados o no se pudo conectar con el agente.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

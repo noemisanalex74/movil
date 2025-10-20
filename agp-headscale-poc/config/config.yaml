@@ -1,0 +1,15 @@
+# URL pública del servidor Headscale. Para una PoC local, usamos la IP del host de Docker.
+# En un despliegue real, sería un dominio público (ej. https://headscale.example.com)
+server_url: http://127.0.0.1:8080
+
+# Dirección y puerto en el que Headscale escuchará dentro del contenedor.
+listen_addr: 0.0.0.0:8080
+
+# Prefijos de IP para asignar a los nodos de la red.
+# 100.64.0.0/10 es el rango estándar usado por Tailscale.
+ip_prefixes:
+  - 100.64.0.0/10
+
+# Ruta a la base de datos SQLite donde Headscale guardará su estado.
+db_type: sqlite3
+db_path: /var/lib/headscale/db.sqlite

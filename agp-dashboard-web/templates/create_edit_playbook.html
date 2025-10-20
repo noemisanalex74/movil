@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "create" %}Crear Nuevo Playbook{% else %}Editar Playbook{% endif %} - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">{% if mode == "create" %}Crear Nuevo Playbook{% else %}Editar Playbook: {{ playbook_id }}{% endif %}</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            {% if mode == "create" %}Nuevo Playbook{% else %}Contenido del Playbook{% endif %}
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{% if mode == 'create' %}{{ url_for('agents.create_playbook') }}{% else %}{{ url_for('agents.edit_playbook', playbook_id=playbook_id) }}{% endif %}">
+                {% if mode == "create" %}
+                <div class="mb-3">
+                    <label for="playbook_id" class="form-label">ID del Playbook:</label>
+                    <input type="text" class="form-control" id="playbook_id" name="playbook_id" required>
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <label for="playbook_content" class="form-label">Contenido JSON del Playbook:</label>
+                    <div class="mb-2">
+                        <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#ayuda-playbook" aria-expanded="false" aria-controls="ayuda-playbook">
+                            <i class="bi bi-info-circle-fill me-1"></i> Mostrar/Ocultar Ayuda de Sintaxis
+                        </button>
+                    </div>
+                    <div class="collapse" id="ayuda-playbook">
+                        <div class="card card-body bg-light mb-3">
+                            <h6>Ejemplo de Condición (`when`):</h6>
+                            <p class="small">El paso solo se ejecuta si el `stdout` del `paso_anterior` contiene la palabra 'ERROR'.</p>
+                            <pre><code>{
+    "step_id": "paso_condicional",
+    "type": "shell",
+    "command": "echo 'El paso anterior falló'",
+    "when": "'ERROR' in steps.paso_anterior.stdout"
+}</code></pre>
+                            <hr>
+                            <h6>Ejemplo de Bucle (`loop`):</h6>
+                            <p class="small">El comando se ejecuta para cada ítem en la lista. Usa `{{ item }}` para referenciar el ítem actual.</p>
+                            <pre><code>{
+    "step_id": "paso_bucle",
+    "type": "shell",
+    "command": "echo 'Procesando {{ item }}'",
+    "loop": ["servidor1", "servidor2", "servidor3"]
+}</code></pre>
+                        </div>
+                    </div>
+                    <textarea class="form-control" id="playbook_content" name="playbook_content" rows="20" required>{{ playbook | tojson(indent=2) if playbook else '' }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">{% if mode == "create" %}Crear Playbook{% else %}Guardar Cambios{% endif %}</button>
+                <a href="{{ url_for('agents.playbooks_manager') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

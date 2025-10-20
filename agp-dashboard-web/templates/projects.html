@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}GestiÃ³n de Proyectos - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4">GestiÃ³n de Proyectos</h1>
+        <a href="{{ url_for('projects.add_project') }}" class="btn btn-success mt-4">
+            <i class="bi bi-plus-lg"></i> AÃ±adir Nuevo Proyecto
+        </a>
+    </div>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">GestiÃ³n de Proyectos</li>
+    </ol>
+
+    <div class="row">
+        {% if proyectos %}
+            {% for proyecto in proyectos %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">{{ proyecto.name }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ proyecto.description }}</h6>
+                        <p class="card-text">Ruta: <code>{{ proyecto.path or 'No especificada' }}</code></p>
+                        <p class="card-text">Estado: <span class="badge bg-info">{{ proyecto.status }}</span></p>
+                        <p class="card-text">Ãšltima ModificaciÃ³n: {{ proyecto.last_modified.strftime('%Y-%m-%d %H:%M') }}</p>
+
+                        <div class="progress mb-2" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ proyecto.progreso }}%;" aria-valuenow="{{ proyecto.progreso }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted">{{ proyecto.completed_tasks }} de {{ proyecto.total_tasks }} tareas completadas ({{ proyecto.progreso }}%)</small>
+                    </div>
+                    <div class="card-footer text-end">
+                        <a href="{{ url_for('projects.edit_project', project_id=proyecto.id) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal" data-bs-delete-url="{{ url_for('projects.delete_project', project_id=proyecto.id) }}">
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="text-center p-5 my-5 bg-body-tertiary rounded-3 border">
+                    <svg width="150" height="150" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-4">
+                        <style>
+                            .base { fill: #24283b; }
+                            .outline { stroke: #414868; stroke-width: 2; }
+                            .text { fill: #545c7e; font-family: sans-serif; font-size: 14px; text-anchor: middle; }
+                            .icon { stroke: #545c7e; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+                        </style>
+                        <rect class="base" width="200" height="200" rx="15"/>
+                        <g transform="translate(50, 40)">
+                            <path class="outline" d="M20,0 H80 C91.0457,0 100,8.9543 100,20 V90 C100,101.046 91.0457,110 80,110 H20 C8.9543,110 0,101.046 0,90 V20 C0,8.9543 8.9543,0 20,0 Z" fill="#1a1b26"/>
+                            <circle class="icon" cx="45" cy="50" r="18"/>
+                            <line class="icon" x1="58" y1="63" x2="75" y2="80"/>
+                            <line class="icon" x1="20" y1="25" x2="80" y2="25"/>
+                            <line class="icon" x1="20" y1="85" x2="60" y2="85"/>
+                        </g>
+                    </svg>
+                    <h5 class="mt-4">No se encontraron proyectos</h5>
+                    <p class="text-muted">Crea tu primer proyecto para empezar a organizarte.</p>
+                    <a href="{{ url_for('projects.add_project') }}" class="btn btn-primary mt-3">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        Crear Nuevo Proyecto
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirmar EliminaciÃ³n</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Â¿EstÃ¡s seguro de que quieres eliminar este proyecto? Esta acciÃ³n no se puede deshacer.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="deleteForm" method="POST" action="">
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const deleteConfirmationModal = document.getElementById('deleteConfirmationModal');
+    if (deleteConfirmationModal) {
+        deleteConfirmationModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const deleteUrl = button.getAttribute('data-bs-delete-url');
+            const deleteForm = document.getElementById('deleteForm');
+            deleteForm.action = deleteUrl;
+        });
+    }
+});
+</script>
+{% endblock %}

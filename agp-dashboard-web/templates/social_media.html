@@ -1,0 +1,38 @@
+
+{% extends "layout.html" %}
+
+{% block title %}
+Social Media - AGP Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Social Media</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Social Media</li>
+    </ol>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-share-alt me-1"></i>
+            Asistente de Redes Sociales
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Funcionalidad en desarrollo</h5>
+            <p class="card-text">
+                Esta sección está lista para ser construida. Por favor, indícame qué te gustaría hacer aquí.
+            </p>
+            <p class="card-text">
+                Algunas ideas podrían ser:
+                <ul>
+                    <li>Un formulario para escribir un post y publicarlo en varias redes (Twitter, LinkedIn, etc.).</li>
+                    <li>Un calendario para programar futuras publicaciones.</li>
+                    <li>Un generador de contenido o ideas para posts.</li>
+                </ul>
+            </p>
+            <p>¡Espero tus instrucciones para empezar a darle forma!</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

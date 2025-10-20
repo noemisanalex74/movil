@@ -1,0 +1,38 @@
+name: "Playbook de Prueba del Sistema"
+description: "Verifica la funcionalidad básica del agente ejecutando comandos seguros."
+version: "1.0"
+
+# El target real se seleccionará desde la UI, pero lo dejamos aquí como referencia.
+target: "agent-001-test"
+
+vars:
+  directorio_a_listar: "/data/data/com.termux/files/home"
+  mensaje_echo: "Hola desde el playbook!"
+
+tasks:
+  - name: "Verificar identidad del usuario del agente"
+    module: command
+    args: "whoami"
+    register: whoami_result
+
+  - name: "Mostrar usuario del agente (debug)"
+    module: debug
+    args: "El agente se está ejecutando como: {{ whoami_result.stdout }}"
+
+  - name: "Obtener fecha y hora del agente"
+    module: command
+    args: "date"
+    register: date_result
+
+  - name: "Mostrar fecha y hora (debug)"
+    module: debug
+    args: "Fecha y hora en el agente: {{ date_result.stdout }}"
+
+  - name: "Probar comando echo con variable"
+    module: command
+    args: "echo {{ mensaje_echo }}"
+
+  - name: "Listar contenido de un directorio"
+    module: command
+    args: "ls -l {{ directorio_a_listar }}"
+    register: ls_result

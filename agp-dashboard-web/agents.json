@@ -1,0 +1,16 @@
+[
+    {
+        "id": "agent-test-001",
+        "name": "Test Agent (Local)",
+        "address": "127.0.0.1",
+        "description": "Default agent for local testing.",
+        "status": "offline"
+    },
+    {
+        "id": "agent-prod-001",
+        "name": "Servidor de Producción",
+        "address": "192.168.1.100",
+        "description": "Agente en el servidor de producción principal.",
+        "status": "online"
+    }
+]

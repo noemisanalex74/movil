@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Herramientas Personalizadas (MCP) - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Gestión de Herramientas Personalizadas (MCP)</h1>
+
+<div class="search-container mb-4">
+    <form class="d-flex"> {# Removed method="GET" and action="{{ url_for('mcp_manager') }}" #}
+        <input type="text" id="mcpSearchInput" placeholder="Buscar herramienta..." value="{{ search_query if search_query else '' }}" class="form-control me-2">
+        <button type="button" class="btn btn-primary" id="clearSearchButton">Limpiar</button> {# Changed to type="button" #}
+    </form>
+</div>
+
+<div class="mcp-list">
+    {% if tools %}
+        <ul class="list-group" id="mcpList">
+            {% for tool in tools %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{{ tool }}</span>
+                    <div class="mcp-actions">
+                        <a href="#" class="btn btn-sm btn-warning me-2 install-deps-btn" data-bs-toggle="modal" data-bs-target="#installDepsModal" data-mcp-name="{{ tool }}">Instalar Dependencias</a>
+                        <a href="#" class="btn btn-sm btn-primary me-2 send-mcp-btn" data-bs-toggle="modal" data-bs-target="#sendMcpModal" data-mcp-name="{{ tool }}">Enviar a Agente</a>
+                        <a href="{{ url_for('mcp.mcp_edit', filename=tool) }}" class="btn btn-sm btn-info me-2">Editar</a>
+                        <a href="#" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal" data-bs-delete-url="{{ url_for('mcp.mcp_delete', filename=tool) }}">Eliminar</a>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted">No hay herramientas personalizadas instaladas.</p>
+    {% endif %}
+</div>
+
+<div class="add-button-container text-center mt-4">
+    <a href="{{ url_for('mcp.mcp_add') }}" class="btn btn-success me-2">Añadir Nueva Herramienta</a>
+    
+</div>
+
+{# Removed server-side pagination section #}
+
+<!-- Delete Confirmation Modal (remains the same) -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Estás seguro de que quieres eliminar este elemento? Esta acción no se puede deshacer.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <a href="#" id="confirmDeleteButton" class="btn btn-danger">Eliminar</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send MCP Modal -->
+<div class="modal fade" id="sendMcpModal" tabindex="-1" aria-labelledby="sendMcpModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sendMcpModalLabel">Enviar MCP a Agente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona el agente al que deseas enviar el MCP: <strong id="mcpFileName"></strong></p>
+                <div class="list-group">
+                    {% if agents %}
+                        {% for agent in agents %}
+                            <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center select-agent-btn" data-agent-id="{{ agent.sid }}" data-agent-name="{{ agent.platform }} ({{ agent.ip }})">
+                                {{ agent.platform }} ({{ agent.ip }})
+                                {% if agent.status == 'online' %}
+                                    <span class="badge bg-success rounded-pill">Online</span>
+                                {% else %}
+                                    <span class="badge bg-danger rounded-pill">Offline</span>
+                                {% endif %}
+                            </button>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No hay agentes conectados.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Install Dependencies Modal -->
+<div class="modal fade" id="installDepsModal" tabindex="-1" aria-labelledby="installDepsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="installDepsModalLabel">Instalar Dependencias para MCP</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona el agente en el que deseas instalar las dependencias para el MCP: <strong id="mcpDepsFileName"></strong></p>
+                <div class="list-group">
+                    {% if agents %}
+                        {% for agent in agents %}
+                            <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center select-agent-deps-btn" data-agent-id="{{ agent.sid }}" data-agent-name="{{ agent.platform }} ({{ agent.ip }})">
+                                {{ agent.platform }} ({{ agent.ip }})
+                                {% if agent.status == 'online' %}
+                                    <span class="badge bg-success rounded-pill">Online</span>
+                                {% else %}
+                                    <span class="badge bg-danger rounded-pill">Offline</span>
+                                {% endif %}
+                            </button>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No hay agentes conectados.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const deleteConfirmationModal = document.getElementById('deleteConfirmationModal');
+    deleteConfirmationModal.addEventListener('show.bs.modal', event => {
+        const button = event.relatedTarget;
+        const deleteUrl = button.getAttribute('data-bs-delete-url');
+        const confirmDeleteButton = deleteConfirmationModal.querySelector('#confirmDeleteButton');
+        confirmDeleteButton.href = deleteUrl;
+    });
+
+    // Client-side search filter
+    const mcpSearchInput = document.getElementById('mcpSearchInput');
+    const mcpList = document.getElementById('mcpList');
+    const clearSearchButton = document.getElementById('clearSearchButton');
+
+    if (mcpSearchInput && mcpList) {
+        const mcps = mcpList.getElementsByTagName('li');
+
+        const filterMcps = () => {
+            const filter = mcpSearchInput.value.toLowerCase();
+            for (let i = 0; i < mcps.length; i++) {
+                const mcpText = mcps[i].textContent || mcps[i].innerText;
+                if (mcpText.toLowerCase().indexOf(filter) > -1) {
+                    mcps[i].style.display = "";
+                } else {
+                    mcps[i].style.display = "none";
+                }
+            }
+        };
+
+        mcpSearchInput.addEventListener('keyup', filterMcps);
+        clearSearchButton.addEventListener('click', () => {
+            mcpSearchInput.value = '';
+            filterMcps();
+        });
+
+        // Initial filter if there's a pre-filled search query
+        if (mcpSearchInput.value) {
+            filterMcps();
+        }
+    }
+
+    // Send MCP Modal Logic
+    const sendMcpModal = document.getElementById('sendMcpModal');
+    if (sendMcpModal) {
+        sendMcpModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+            const mcpName = button.getAttribute('data-mcp-name');
+            const mcpFileNameSpan = sendMcpModal.querySelector('#mcpFileName');
+            mcpFileNameSpan.textContent = mcpName;
+
+            // Attach click listener to agent selection buttons
+            sendMcpModal.querySelectorAll('.select-agent-btn').forEach(agentBtn => {
+                agentBtn.onclick = function() {
+                    const agentId = this.getAttribute('data-agent-id');
+                    const agentName = this.getAttribute('data-agent-name');
+                    const confirmSend = confirm(`¿Estás seguro de que quieres enviar "${mcpName}" al agente "${agentName}"?`);
+                    if (confirmSend) {
+                        // Redirect to the new route to send the MCP
+                        window.location.href = `/send_mcp_to_agent/${agentId}/${mcpName}`;
+                    }
+                    bootstrap.Modal.getInstance(sendMcpModal).hide(); // Close modal
+                };
+            });
+        });
+    }
+
+    // Install Dependencies Modal Logic
+    const installDepsModal = document.getElementById('installDepsModal');
+    if (installDepsModal) {
+        installDepsModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+            const mcpName = button.getAttribute('data-mcp-name');
+            const mcpDepsFileNameSpan = installDepsModal.querySelector('#mcpDepsFileName');
+            mcpDepsFileNameSpan.textContent = mcpName;
+
+            // Fetch requirements.txt content for the selected MCP
+            fetch(`/get_mcp_requirements/${mcpName}`)
+                .then(response => response.json())
+                .then(data => {
+                    const requirementsContent = data.requirements_content;
+                    // Attach click listener to agent selection buttons
+                    installDepsModal.querySelectorAll('.select-agent-deps-btn').forEach(agentBtn => {
+                        agentBtn.onclick = function() {
+                            const agentId = this.getAttribute('data-agent-id');
+                            const agentName = this.getAttribute('data-agent-name');
+                            const confirmInstall = confirm(`¿Estás seguro de que quieres instalar las dependencias de "${mcpName}" en el agente "${agentName}"?`);
+                            if (confirmInstall) {
+                                // Send POST request to install dependencies
+                                const formData = new FormData();
+                                formData.append('requirements_content', requirementsContent);
+
+                                fetch(`/install_mcp_dependencies/${agentId}`, {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                .then(response => response.json()) // Asume que la respuesta es JSON
+                                .then(result => {
+                                    if (result.success) {
+                                        alert('Solicitud de instalación enviada con éxito.');
+                                    } else {
+                                        alert('Error al enviar la solicitud de instalación: ' + result.message);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                    alert('Error de red al enviar la solicitud de instalación.');
+                                });
+                            }
+                            bootstrap.Modal.getInstance(installDepsModal).hide(); // Close modal
+                        };
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching requirements:', error);
+                    alert('Error al cargar las dependencias del MCP.');
+                    bootstrap.Modal.getInstance(installDepsModal).hide(); // Close modal
+                });
+        });
+    }
+</script>
+{% endblock %}

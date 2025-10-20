@@ -1,0 +1,32 @@
+{
+    "playbook_id": "pb_social_content_generator",
+    "name": "Generador de Contenido para Redes Sociales",
+    "description": "Un playbook que busca noticias sobre un tema, genera un post y una idea para una imagen.",
+    "variables": [
+        {
+            "name": "topic",
+            "description": "El tema sobre el que buscar noticias.",
+            "default": "tecnología"
+        }
+    ],
+    "steps": [
+        {
+            "step_id": "1",
+            "type": "command",
+            "description": "Buscar noticias recientes sobre el tema.",
+            "command": "echo 'Simulación: Noticia encontrada sobre ${topic}'"
+        },
+        {
+            "step_id": "2",
+            "type": "command",
+            "description": "Generar el texto del post y el prompt de la imagen.",
+            "command": "echo 'Simulación: Texto del post sobre ${topic} y prompt de imagen generados.'"
+        },
+        {
+            "step_id": "3",
+            "type": "command",
+            "description": "Guardar el contenido generado en el historial.",
+            "command": "echo 'Simulación: Contenido guardado en social_content.json'"
+        }
+    ]
+}

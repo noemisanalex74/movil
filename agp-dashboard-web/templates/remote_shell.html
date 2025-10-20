@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Terminal Remota - {{ agent_id }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+<style>
+    #terminal-container {
+        width: 100%;
+        height: calc(100vh - 200px); /* Adjust height as needed */
+    }
+    #terminal {
+        width: 100%;
+        height: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Terminal Remota: <span class="text-primary">{{ agent_id }}</span></h1>
+<div id="terminal-container" class="bg-dark">
+    <div id="terminal"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const term = new Terminal({
+        cursorBlink: true,
+        theme: {
+            background: '#1e1e1e',
+            foreground: '#d4d4d4'
+        }
+    });
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal'));
+    fitAddon.fit();
+
+    window.addEventListener('resize', () => {
+        fitAddon.fit();
+    });
+
+    const socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/remote_shell');
+    const agentId = '{{ agent_id }}';
+    const shellId = 'shell_' + agentId + '_' + Date.now(); // Unique shell ID for the session
+
+    socket.on('connect', () => {
+        console.log('Connected to remote shell namespace.');
+        // Request to start the shell on the agent
+        socket.emit('shell_start', { agent_id: agentId, shell_id: shellId });
+    });
+
+    // Handle output from the server (relayed from the agent)
+    socket.on('shell_output', (data) => {
+        if (data.shell_id === shellId) {
+            term.write(data.output);
+        }
+    });
+    
+    socket.on('shell_closed', (data) => {
+        if (data.shell_id === shellId) {
+            term.write('\n\r--- SHELL CLOSED --- \n\r');
+            socket.disconnect();
+        }
+    });
+
+    // Send user input to the server
+    term.onData(data => {
+        socket.emit('shell_input', { shell_id: shellId, input: data });
+    });
+
+    // Handle terminal resize
+    term.onResize(size => {
+        socket.emit('shell_resize', { 
+            shell_id: shellId, 
+            rows: size.rows, 
+            cols: size.cols 
+        });
+    });
+});
+</script>
+{% endblock %}

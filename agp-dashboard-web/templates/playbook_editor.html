@@ -1,0 +1,193 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .editor-wrapper {
+        display: flex;
+        height: calc(100vh - 150px); /* Adjust height based on navbar/header */
+        gap: 1rem;
+    }
+    .editor-toolbox, .editor-inspector {
+        flex: 0 0 250px;
+        padding: 1rem;
+        background-color: var(--bg-secondary-solid);
+        border-radius: var(--border-radius);
+        overflow-y: auto;
+    }
+    .editor-canvas {
+        flex-grow: 1;
+        background-color: rgba(0,0,0,0.1);
+        border: 1px dashed var(--border-solid);
+        border-radius: var(--border-radius);
+        position: relative;
+    }
+    .playbook-node {
+        position: absolute;
+        background-color: var(--bg-secondary-solid);
+        border: 1px solid var(--border-solid);
+        border-radius: var(--border-radius);
+        padding: 0.8rem 1.2rem;
+        cursor: move;
+        width: 200px;
+    }
+    .playbook-node:hover {
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ title }}</h1>
+
+<div class="editor-wrapper">
+    <!-- Toolbox -->
+    <div class="editor-toolbox">
+        <h5>Pasos Disponibles</h5>
+        <hr>
+        <div class="list-group">
+            <a href="#" class="list-group-item list-group-item-action" draggable="true" data-node-type="run-command">
+                <i class="bi bi-terminal-fill me-2"></i> Ejecutar Comando
+            </a>
+            <a href="#" class="list-group-item list-group-item-action" draggable="true" data-node-type="api-call">
+                <i class="bi bi-cloud-arrow-up-fill me-2"></i> Llamada API
+            </a>
+            <a href="#" class="list-group-item list-group-item-action" draggable="true" data-node-type="wait">
+                <i class="bi bi-hourglass-split me-2"></i> Esperar
+            </a>
+        </div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="canvas" class="editor-canvas">
+        <!-- Nodes will be dropped here -->
+        <div class="playbook-node" style="top: 20px; left: 20px;">
+            <h6><i class="bi bi-flag-fill me-2"></i> Inicio</h6>
+        </div>
+    </div>
+
+    <!-- Inspector -->
+    <div class="editor-inspector">
+        <h5>Propiedades</h5>
+        <hr>
+        <div id="inspector-content">
+            <p class="text-muted">Selecciona un paso para ver sus propiedades.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toolboxItems = document.querySelectorAll('.editor-toolbox .list-group-item');
+    const canvas = document.getElementById('canvas');
+    let connections = [];
+
+    // --- Drag and Drop from Toolbox ---
+    let draggedItemType = null;
+    toolboxItems.forEach(item => {
+        item.addEventListener('dragstart', e => { draggedItemType = e.target.dataset.nodeType; });
+    });
+    canvas.addEventListener('dragover', e => e.preventDefault());
+    canvas.addEventListener('drop', e => {
+        e.preventDefault();
+        if (!draggedItemType) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        createNode(draggedItemType, e.clientX - canvasRect.left, e.clientY - canvasRect.top);
+        draggedItemType = null;
+    });
+
+    function createNode(type, x, y) {
+        const nodeId = `node-${Date.now()}`;
+        const node = document.createElement('div');
+        node.id = nodeId;
+        node.className = 'playbook-node';
+        node.style.left = `${x - 100}px`;
+        node.style.top = `${y - 25}px`;
+        let icon = '', name = '';
+        switch(type) {
+            case 'run-command': icon = 'bi-terminal-fill'; name = 'Ejecutar Comando'; break;
+            case 'api-call': icon = 'bi-cloud-arrow-up-fill'; name = 'Llamada API'; break;
+            case 'wait': icon = 'bi-hourglass-split'; name = 'Esperar'; break;
+            default: return;
+        }
+        node.innerHTML = `<h6><i class="bi ${icon} me-2"></i> ${name}</h6><div class="connector-out"></div>`;
+        canvas.appendChild(node);
+    }
+
+    // --- Node Dragging and Connecting Logic ---
+    let activeNode = null, isConnecting = false, connectionLine = null, startNode = null;
+    let offsetX = 0, offsetY = 0;
+
+    canvas.addEventListener('mousedown', function(e) {
+        const targetNode = e.target.closest('.playbook-node');
+        if (!targetNode) return;
+
+        if (e.target.classList.contains('connector-out')) {
+            isConnecting = true;
+            startNode = targetNode;
+            const ghost = document.createElement('div');
+            ghost.style.position = 'fixed';
+            document.body.appendChild(ghost);
+            connectionLine = new LeaderLine(e.target, ghost, { color: 'var(--primary-color)', dash: { animation: true } });
+            
+            const moveGhost = (event) => {
+                ghost.style.left = event.clientX + 'px';
+                ghost.style.top = event.clientY + 'px';
+                connectionLine.position();
+            };
+            moveGhost(e);
+            document.addEventListener('mousemove', moveGhost);
+
+            document.addEventListener('mouseup', function onMouseUp(upEvent) {
+                const endNode = upEvent.target.closest('.playbook-node');
+                if (endNode && endNode !== startNode) {
+                    const newLine = new LeaderLine(startNode, endNode, { color: 'var(--primary-color)', endPlug: 'arrow1' });
+                    connections.push({ from: startNode.id, to: endNode.id, line: newLine });
+                }
+                connectionLine.remove();
+                ghost.remove();
+                document.removeEventListener('mousemove', moveGhost);
+                isConnecting = false;
+                startNode = null;
+            }, { once: true });
+
+        } else {
+            activeNode = targetNode;
+            offsetX = e.clientX - activeNode.getBoundingClientRect().left;
+            offsetY = e.clientY - activeNode.getBoundingClientRect().top;
+            activeNode.style.cursor = 'grabbing';
+            activeNode.style.zIndex = 1000;
+        }
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+        if (activeNode && !isConnecting) {
+            e.preventDefault();
+            const canvasRect = canvas.getBoundingClientRect();
+            activeNode.style.left = `${e.clientX - canvasRect.left - offsetX}px`;
+            activeNode.style.top = `${e.clientY - canvasRect.top - offsetY}px`;
+            connections.forEach(conn => {
+                if (conn.from === activeNode.id || conn.to === activeNode.id) {
+                    conn.line.position();
+                }
+            });
+        }
+    });
+
+    canvas.addEventListener('mouseup', function() {
+        if (activeNode) {
+            activeNode.style.cursor = 'move';
+            activeNode.style.zIndex = 1;
+            activeNode = null;
+        }
+    });
+});
+</script>
+{% endblock %}

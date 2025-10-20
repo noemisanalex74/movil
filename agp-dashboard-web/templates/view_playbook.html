@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Playbook: {{ playbook.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Ver Playbook: {{ playbook.name }}</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Detalles del Playbook
+        </div>
+        <div class="card-body">
+            <p><strong>ID:</strong> {{ playbook.playbook_id }}</p>
+            <p><strong>Descripción:</strong> {{ playbook.description }}</p>
+            <p><strong>Versión:</strong> {{ playbook.version }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Pasos del Playbook
+        </div>
+        <div class="card-body">
+            <pre class="bg-light p-3 rounded">{{ playbook.steps | tojson(indent=2) }}</pre>
+        </div>
+    </div>
+
+    <a href="{{ url_for('agents.playbooks_manager') }}" class="btn btn-secondary mt-3">Volver a la Gestión de Playbooks</a>
+</div>
+{% endblock %}

@@ -1,49 +1,91 @@
 {% extends "base.html" %}
 {% block title %}Resumen del Dashboard{% endblock %}
 
+{% block styles %}
+<style>
+    .stat-card .card-body {
+        position: relative;
+    }
+    .skeleton-line {
+        height: 1em;
+        width: 75%;
+        background: linear-gradient(-90deg, #f0f0f0 0%, #fafafa 50%, #f0f0f0 100%);
+        background-size: 400% 400%;
+        animation: skeleton-pulse 1.2s ease-in-out infinite;
+        border-radius: 4px;
+        margin-top: 8px;
+    }
+    .dark-mode .skeleton-line {
+        background: linear-gradient(-90deg, #3a3a3a 0%, #404040 50%, #3a3a3a 100%);
+        background-size: 400% 400%;
+    }
+    @keyframes skeleton-pulse {
+        0% { background-position: 100% 50%; }
+        100% { background-position: 0 50%; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid mt-4">
-    <h1 class="mb-4">Resumen General del Dashboard</h1>
+    <h1 class="mb-4">Resumen General</h1>
 
     <div class="row">
-        <div class="col-md-3 mb-4">
-            <div class="card text-white bg-primary shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Total Proyectos</h5>
-                    <p class="card-text display-4">{{ stats.total_proyectos }}</p>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="#" class="stat-card-link" data-submenu-id="submenu-gestion">
+                <div class="card text-white bg-primary shadow-sm h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <h5 class="card-title"><i class="bi bi-folder-check me-2"></i>Total Proyectos</h5>
+                        <p class="card-text display-4 fw-bold" id="total-proyectos-stat">-</p>
+                        <div class="skeleton-line w-50"></div>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card text-white bg-success shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Tareas Pendientes</h5>
-                    <p class="card-text display-4">{{ stats.tareas_pendientes }}</p>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="#" class="stat-card-link" data-submenu-id="submenu-gestion">
+                <div class="card shadow-sm h-100 stat-card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="bi bi-list-check me-2"></i>Resumen de Tareas</h5>
+                        <canvas id="taskSummaryChart"></canvas>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card text-white bg-info shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">MCPs Registrados</h5>
-                    <p class="card-text display-4">{{ stats.mcps_registrados }}</p>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <a href="#" class="stat-card-link" data-submenu-id="submenu-gestion">
+                <div class="card text-white bg-info shadow-sm h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <h5 class="card-title"><i class="bi bi-tools me-2"></i>MCPs Registrados</h5>
+                        <p class="card-text display-4 fw-bold" id="mcps-registrados-stat">-</p>
+                        <div class="skeleton-line w-50"></div>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card text-white bg-warning shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Última Tarea Completada</h5>
-                    <p class="card-text display-4">{{ stats.ultima_tarea_completada }}</p>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card bg-light text-dark shadow-sm h-100 stat-card">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <h5 class="card-title"><i class="bi bi-check2-square me-2"></i>Última Tarea Completada</h5>
+                    <p class="card-text fs-5" id="last-task-ticker">Cargando...</p>
+                    <div class="skeleton-line"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Submenus -->
+    <div id="submenu-gestion" class="dashboard-submenu">
+        <a href="{{ url_for('projects.projects_manager') }}" class="submenu-item"><i class="bi bi-folder-check"></i><span>Gestionar Proyectos</span></a>
+        <a href="{{ url_for('tasks.tasks_manager') }}" class="submenu-item"><i class="bi bi-list-check"></i><span>Gestionar Tareas</span></a>
+        <a href="{{ url_for('mcp.mcp_manager') }}" class="submenu-item"><i class="bi bi-tools"></i><span>Gestionar MCPs</span></a>
+    </div>
+
+
     <div class="row">
         <div class="col-md-6 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white">Estadísticas de Proyectos por Estado</div>
+                <div class="card-header">Estadísticas de Proyectos por Estado</div>
                 <div class="card-body">
                     <canvas id="projectStatusChart"></canvas>
                 </div>
@@ -51,136 +93,215 @@
         </div>
         <div class="col-md-6 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white">Estadísticas de Tareas por Prioridad</div>
+                <div class="card-header">Estadísticas de Tareas por Estado</div>
                 <div class="card-body">
-                    <canvas id="taskPriorityChart"></canvas>
+                    <canvas id="taskStatusChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white">Actividad Reciente</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        {% for activity in recent_activity %}
-                            <li class="list-group-item">{{ activity.timestamp }} - {{ activity.description }}</li>
-                        {% else %}
-                            <li class="list-group-item">No hay actividad reciente.</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Datos reales para los gráficos desde el backend
-        const projectStatusCounts = {{ project_status_counts | tojson }};
-        const taskStatusCounts = {{ task_status_counts | tojson }};
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Dashboard Card Submenu Logic ---
+    const statCardLinks = document.querySelectorAll('.stat-card-link');
 
-        const projectStatusLabels = Object.keys(projectStatusCounts);
-        const projectStatusValues = Object.values(projectStatusCounts);
+    statCardLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const submenuId = this.dataset.submenuId;
+            const submenu = document.getElementById(submenuId);
+            const isAlreadyZoomed = this.classList.contains('zoomed');
 
-        const taskStatusLabels = Object.keys(taskStatusCounts);
-        const taskStatusValues = Object.values(taskStatusCounts);
+            // Hide all submenus first
+            document.querySelectorAll('.dashboard-submenu').forEach(sm => sm.style.display = 'none');
+            
+            // Reset all cards
+            statCardLinks.forEach(l => {
+                l.classList.remove('zoomed');
+                l.classList.remove('unfocused');
+            });
 
-        const projectStatusData = {
-            labels: projectStatusLabels,
-            datasets: [{
-                label: 'Proyectos',
-                data: projectStatusValues,
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 206, 86, 0.7)',
-                    'rgba(75, 192, 192, 0.7)',
-                    'rgba(153, 102, 255, 0.7)',
-                    'rgba(255, 159, 64, 0.7)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)'
-                ],
-                borderWidth: 1
-            }]
-        };
-
-        const taskPriorityData = {
-            labels: taskStatusLabels,
-            datasets: [{
-                label: 'Tareas',
-                data: taskStatusValues,
-                backgroundColor: [
-                    'rgba(255, 159, 64, 0.7)',
-                    'rgba(153, 102, 255, 0.7)',
-                    'rgba(201, 203, 207, 0.7)',
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 206, 86, 0.7)'
-                ],
-                borderColor: [
-                    'rgba(255, 159, 64, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(201, 203, 207, 1)',
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)'
-                ],
-                borderWidth: 1
-            }]
-        };
-
-        // Configuración de los gráficos
-        const projectStatusCtx = document.getElementById('projectStatusChart').getContext('2d');
-        new Chart(projectStatusCtx, {
-            type: 'doughnut',
-            data: projectStatusData,
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: false,
-                        text: 'Proyectos por Estado'
-                    }
+            if (!isAlreadyZoomed) {
+                // Open the clicked one
+                this.classList.add('zoomed');
+                if (submenu) {
+                    submenu.style.display = 'block';
                 }
-            },
-        });
-
-        const taskPriorityCtx = document.getElementById('taskPriorityChart').getContext('2d');
-        new Chart(taskPriorityCtx, {
-            type: 'bar',
-            data: taskPriorityData,
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false,
-                    },
-                    title: {
-                        display: false,
-                        text: 'Tareas por Prioridad'
+                // Unfocus the others
+                statCardLinks.forEach(otherLink => {
+                    if (otherLink !== this) {
+                        otherLink.classList.add('unfocused');
                     }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            },
+                });
+            }
+            // If it was already zoomed, everything is now reset and the submenu is hidden.
         });
     });
+
+    // --- Initialize VanillaTilt on stat cards ---
+    /*
+    VanillaTilt.init(document.querySelectorAll(".stat-card"), {
+        max: 15,
+        speed: 400,
+        glare: true,
+        "max-glare": 0.2,
+    });
+    */
+
+
+    // --- Utility Functions ---
+    const animateValue = (obj, start, end, duration) => {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    };
+
+    const getChartThemeColors = () => {
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        return {
+            textColor: isDarkMode ? '#c0caf5' : '#212529',
+            gridColor: isDarkMode ? 'rgba(122, 162, 247, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            primary: '#7aa2f7', 
+            green: '#9ece6a', 
+            yellow: '#e0af68',
+            blue: '#545c7e',
+            red: '#f7768e'
+        };
+    };
+
+    const createNeonGradient = (ctx, color) => {
+        const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+        gradient.addColorStop(0, `${color}ff`);
+        gradient.addColorStop(1, `${color}33`);
+        return gradient;
+    };
+
+    // --- Main Data Fetching ---
+    const fetchDashboardData = async () => {
+        try {
+            const response = await fetch("{{ url_for('api_dashboard_stats') }}");
+            if (!response.ok) throw new Error('Network response was not ok');
+            const stats = await response.json();
+
+            document.querySelectorAll('.skeleton-line').forEach(el => el.style.display = 'none');
+
+            const totalProyectosEl = document.getElementById('total-proyectos-stat');
+            const mcpsRegistradosEl = document.getElementById('mcps-registrados-stat');
+            
+            animateValue(totalProyectosEl, 0, stats.total_proyectos, 1500);
+            animateValue(mcpsRegistradosEl, 0, stats.mcps_registrados, 1500);
+            document.getElementById('last-task-ticker').textContent = stats.ultima_tarea_completada;
+
+            renderTaskSummaryChart(stats.task_status_counts);
+            renderProjectStatusChart(stats.project_status_counts);
+            renderTaskStatusBarChart(stats.task_status_counts);
+
+        } catch (error) {
+            console.error("Error fetching dashboard data:", error);
+            document.querySelectorAll('.stat-card .card-body').forEach(el => el.innerHTML = '<p class="text-danger">Error al cargar</p>');
+        }
+    };
+
+    // --- Chart Rendering Functions ---
+    function renderTaskSummaryChart(taskStatusCounts) {
+        const ctx = document.getElementById('taskSummaryChart')?.getContext('2d');
+        if (!ctx) return;
+        const colors = getChartThemeColors();
+        const { pendiente = 0, en_progreso = 0, completada = 0 } = taskStatusCounts;
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pendientes', 'En Progreso', 'Completadas'],
+                datasets: [{
+                    data: [pendiente, en_progreso, completada],
+                    backgroundColor: [colors.yellow, colors.primary, colors.green],
+                    borderColor: [colors.yellow, colors.primary, colors.green],
+                    borderWidth: 2, hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true, cutout: '70%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 15, color: colors.textColor, font: { size: 14 } } },
+                    title: { display: false }
+                },
+                animation: { animateScale: true, animateRotate: true }
+            }
+        });
+    }
+
+    function renderProjectStatusChart(projectStatusCounts) {
+        const ctx = document.getElementById('projectStatusChart')?.getContext('2d');
+        if (!ctx) return;
+        const colors = getChartThemeColors();
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(projectStatusCounts),
+                datasets: [{
+                    data: Object.values(projectStatusCounts),
+                    backgroundColor: [colors.primary, colors.green, colors.yellow, colors.blue, colors.red],
+                }]
+            },
+            options: { 
+                responsive: true, 
+                plugins: { 
+                    legend: { position: 'right', labels: { color: colors.textColor } } 
+                }
+            }
+        });
+    }
+
+    function renderTaskStatusBarChart(taskStatusCounts) {
+        const ctx = document.getElementById('taskStatusChart')?.getContext('2d');
+        if (!ctx) return;
+        const colors = getChartThemeColors();
+        const gradient = createNeonGradient(ctx, colors.primary);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(taskStatusCounts),
+                datasets: [{
+                    label: 'Nº de Tareas',
+                    data: Object.values(taskStatusCounts),
+                    backgroundColor: gradient,
+                    borderColor: colors.primary,
+                    borderWidth: 2,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: colors.gridColor },
+                        ticks: { color: colors.textColor }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: colors.textColor }
+                    }
+                }
+            }
+        });
+    }
+
+    fetchDashboardData();
+});
 </script>
 {% endblock %}

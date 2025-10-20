@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Asistente de Instalación de Agentes - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Asistente de Instalación de Agentes</h1>
+    <p class="text-muted">Genera un script para desplegar un nuevo agente en un servidor Linux.</p>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-robot me-2"></i>Paso 1: Selecciona un Agente
+        </div>
+        <div class="card-body">
+            <p>Selecciona un agente previamente registrado para generar su script de instalación. Asegúrate de haber creado el agente en la sección "Agentes de Empresa" primero.</p>
+            <form id="agent-select-form">
+                <div class="input-group">
+                    <select class="form-select" id="agent-select" name="agent_id">
+                        <option selected disabled>Elige un agente...</option>
+                        {% for agent in agents %}
+                            <option value="{{ agent.agent_id }}">{{ agent.name }} (ID: {{ agent.agent_id|truncate(8, True, '...') }})</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary" type="submit" id="generate-btn">Generar Script</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="script-card" style="display: none;">
+        <div class="card-header">
+            <i class="bi bi-file-earmark-code-fill me-2"></i>Paso 2: Copia y Ejecuta el Script
+        </div>
+        <div class="card-body">
+            <p>Copia el siguiente script y ejecútalo como un usuario con permisos `sudo` en el servidor destino.</p>
+            <div class="position-relative">
+                <pre><code id="script-output" class="language-bash" style="white-space: pre-wrap; word-break: break-all;"></code></pre>
+                <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 mt-2 me-2" id="copy-btn"><i class="bi bi-clipboard-fill me-1"></i>Copiar</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('agent-select-form');
+    const generateBtn = document.getElementById('generate-btn');
+    const agentSelect = document.getElementById('agent-select');
+    const scriptCard = document.getElementById('script-card');
+    const scriptOutput = document.getElementById('script-output');
+    const copyBtn = document.getElementById('copy-btn');
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const agentId = agentSelect.value;
+
+        if (!agentId || agentId === 'Elige un agente...') {
+            alert('Por favor, selecciona un agente válido.');
+            return;
+        }
+
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generando...';
+
+        const formData = new FormData();
+        formData.append('agent_id', agentId);
+
+        fetch("{{ url_for('agents.generate_install_script') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            scriptOutput.textContent = data.script;
+            scriptCard.style.display = 'block';
+        })
+        .catch(error => {
+            alert(`Error al generar el script: ${error.message}`);
+        })
+        .finally(() => {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = 'Generar Script';
+        });
+    });
+
+    copyBtn.addEventListener('click', function() {
+        navigator.clipboard.writeText(scriptOutput.textContent).then(() => {
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copiado';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+            }, 2000);
+        }).catch(err => {
+            alert('Error al copiar el script.');
+        });
+    });
+});
+</script>
+{% endblock %}

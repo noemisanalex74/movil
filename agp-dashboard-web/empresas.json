@@ -1,0 +1,21 @@
+
+[
+  {
+    "id": 1,
+    "nombre": "Innovatech Solutions",
+    "descripcion": "Soluciones tecnológicas innovadoras para empresas.",
+    "proyectos": [
+      {
+        "id": "P001",
+        "nombre": "Desarrollo de CRM",
+        "estado": "En progreso"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "nombre": "GastroWorld",
+    "descripcion": "Cadena de restaurantes de comida internacional.",
+    "proyectos": []
+  }
+]

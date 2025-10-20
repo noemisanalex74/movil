@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Laboratorio de Esferas 3D - AGP Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* Make the canvas container fill the content area */
+    #render-canvas-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden; /* Hide scrollbars within the content block */
+    }
+    #render-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+    /* Simple info box */
+    #info-box {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 10px 15px;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border-radius: 5px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9em;
+    }
+</style>
+
+<div id="render-canvas-container">
+    <div id="info-box">Haz clic en las esferas para interactuar.</div>
+    <canvas id="render-canvas"></canvas>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<!-- Import Three.js and OrbitControls -->
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- Scene Setup ---
+    const canvasContainer = document.getElementById('render-canvas-container');
+    const canvas = document.getElementById('render-canvas');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x1a1b26, 10, 150); // Match background color
+
+    // --- Camera ---
+    const camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000);
+    camera.position.z = 50;
+
+    // --- Renderer ---
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+
+    // --- Controls ---
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 10;
+    controls.maxDistance = 100;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.5;
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0xc0caf5, 0.5);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0x7aa2f7, 1000, 300);
+    pointLight.position.set(10, 20, 30);
+    pointLight.castShadow = true;
+    scene.add(pointLight);
+
+    const pointLightHelper = new THREE.PointLightHelper(pointLight, 1);
+    // scene.add(pointLightHelper); // Uncomment for debugging light position
+
+    // --- Sphere Creation ---
+    const spheres = [];
+    const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
+    const colors = [0x7aa2f7, 0x9ece6a, 0xf7768e, 0xe0af68, 0xbb9af7];
+
+    for (let i = 0; i < 15; i++) {
+        const material = new THREE.MeshStandardMaterial({
+            color: colors[i % colors.length],
+            metalness: 0.7,
+            roughness: 0.3,
+        });
+        const sphere = new THREE.Mesh(sphereGeometry, material);
+        
+        sphere.position.set(
+            (Math.random() - 0.5) * 80,
+            (Math.random() - 0.5) * 50,
+            (Math.random() - 0.5) * 60
+        );
+
+        sphere.castShadow = true;
+        sphere.userData = {
+            id: i,
+            name: `Esfera ${i+1}`,
+            originalColor: new THREE.Color(colors[i % colors.length])
+        };
+        
+        spheres.push(sphere);
+        scene.add(sphere);
+    }
+
+    // --- Interaction (Raycasting) ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let selectedSphere = null;
+
+    function onMouseClick(event) {
+        // Calculate mouse position in normalized device coordinates (-1 to +1)
+        mouse.x = (event.clientX / canvasContainer.clientWidth) * 2 - 1;
+        mouse.y = - (event.clientY / canvasContainer.clientHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(spheres);
+
+        // If we clicked on a sphere
+        if (intersects.length > 0) {
+            const clickedSphere = intersects[0].object;
+
+            // If we clicked the same sphere, deselect it
+            if (selectedSphere === clickedSphere) {
+                selectedSphere.material.color.set(selectedSphere.userData.originalColor);
+                selectedSphere.scale.set(1, 1, 1);
+                selectedSphere = null;
+                controls.autoRotate = true; // Resume auto-rotation
+            } else {
+                // Deselect the previously selected sphere (if any)
+                if (selectedSphere) {
+                    selectedSphere.material.color.set(selectedSphere.userData.originalColor);
+                    selectedSphere.scale.set(1, 1, 1);
+                }
+                
+                // Select the new sphere
+                selectedSphere = clickedSphere;
+                selectedSphere.material.color.set(0xffffff); // Highlight with white
+                selectedSphere.scale.set(1.5, 1.5, 1.5); // Make it bigger
+                controls.autoRotate = false; // Stop auto-rotation when interacting
+                
+                // Update info box
+                document.getElementById('info-box').textContent = `Seleccionado: ${selectedSphere.userData.name}`;
+            }
+        } else {
+            // If we clicked on the background, deselect any sphere
+            if (selectedSphere) {
+                selectedSphere.material.color.set(selectedSphere.userData.originalColor);
+                selectedSphere.scale.set(1, 1, 1);
+                selectedSphere = null;
+                document.getElementById('info-box').textContent = 'Haz clic en las esferas para interactuar.';
+            }
+            controls.autoRotate = true; // Resume auto-rotation
+        }
+    }
+    window.addEventListener('click', onMouseClick);
+
+    // --- Handle Window Resize ---
+    function onWindowResize() {
+        camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+    }
+    window.addEventListener('resize', onWindowResize);
+
+    // --- Animation Loop ---
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update(); // Required for damping and auto-rotation
+        renderer.render(scene, camera);
+    }
+
+    // --- Vanta.js Integration ---
+    // Allow Vanta.js background to remain visible
+    // Make Three.js renderer background transparent
+    renderer.setClearColor(0x000000, 0); // Transparent background
+
+    animate();
+</script>
+{% endblock %}

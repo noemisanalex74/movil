@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Laboratorio 3D{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Laboratorio 3D</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Laboratorio 3D</li>
+    </ol>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-flask"></i>
+            Zona de Experimentación
+        </div>
+        <div class="card-body text-center">
+            <p class="lead">Bienvenido al Laboratorio 3D.</p>
+            <p>Este es el espacio central para la visualización e interacción con modelos 3D.</p>
+            <p>Usa el menú de navegación para ir a la galería de modelos o para cargar nuevo material.</p>
+            <div class="mt-4">
+                <a href="{{ url_for('threed_lab.gallery') }}" class="btn btn-primary mx-2"><i class="bi bi-collection-fill"></i> Ir a la Galería</a>
+                <a href="{{ url_for('threed_lab.upload') }}" class="btn btn-success mx-2"><i class="bi bi-cloud-arrow-up-fill"></i> Cargar Material</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

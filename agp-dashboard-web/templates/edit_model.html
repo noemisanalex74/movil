@@ -1,0 +1,34 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+Editar Modelo - AGP Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Editar Modelo</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('threed_lab.lab') }}">Laboratorio 3D</a></li>
+        <li class="breadcrumb-item active">Editar: {{ model.name }}</li>
+    </ol>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-pencil-fill me-1"></i>
+            Cambiar nombre del modelo
+        </div>
+        <div class="card-body">
+            <form method="post">
+                <div class="mb-3">
+                    <label for="modelName" class="form-label">Nuevo nombre</label>
+                    <input type="text" class="form-control" id="modelName" name="model_name" value="{{ model.name }}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <a href="{{ url_for('threed_lab.lab') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Ajustes - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Ajustes Generales</h1>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Claves de API y Tokens</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-4">Aquí puedes gestionar las claves de API y tokens de servicios externos. Los valores se guardan de forma segura y no se mostrarán directamente.</p>
+                    <p class="text-muted small">Aquí puedes configurar las claves de API para los servicios externos. Estos valores se guardan de forma segura en la base de datos de la aplicación.</p>
+        <form method="POST">
+            {% for key in allowed_keys %}
+                <div class="mb-3">
+                    <label for="{{ key }}" class="form-label">{{ key.replace('_', ' ')|title }}</label>
+                    {% if 'KEY' in key or 'TOKEN' in key %}
+                        <input type="password" class="form-control" id="{{ key }}" name="{{ key }}" placeholder="Introduce tu clave aquí">
+                    {% else %}
+                        <input type="text" class="form-control" id="{{ key }}" name="{{ key }}" placeholder="Introduce el valor aquí" value="{{ settings.get(key, '') }}">
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Guardar Ajustes</button>
+        </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Información</h6>
+                </div>
+                <div class="card-body">
+                    <p>Las claves guardadas aquí se utilizan para potenciar diversas funcionalidades del dashboard, como la interacción con la API de Gemini o la gestión de repositorios de Git.</p>
+                    <p><strong>Nota de Seguridad:</strong> Nunca compartas estas claves. El sistema las almacenará de forma segura y solo las usará para las operaciones autorizadas.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+
+
+{% extends "base.html" %}
+
+{% block title %}Ejecución Local - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Ejecución de Comandos Locales</h1>
+    <p class="mb-4">
+        Esta sección reemplaza la funcionalidad del antiguo <code>agp-agent</code>. 
+        Aquí puedes ejecutar comandos pre-aprobados de forma segura directamente desde el dashboard.
+    </p>
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Comandos Permitidos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for command in commands %}
+                            <a href="#" class="list-group-item list-group-item-action run-command-btn" data-command-name="{{ command.name }}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ command.name }}</h5>
+                                </div>
+                                <p class="mb-1"><code>{{ command.command }}</code></p>
+                                <small>{{ command.description }}</small>
+                            </a>
+                        {% endfor %}
+                        {% if not commands %}
+                            <p class="text-center">No hay comandos locales permitidos definidos.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Resultado</h6>
+                </div>
+                <div class="card-body">
+                    <pre id="command-output" class="bg-dark text-white p-3 rounded" style="min-height: 300px; white-space: pre-wrap; word-wrap: break-word;">Selecciona un comando para ejecutar...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const commandButtons = document.querySelectorAll('.run-command-btn');
+    const outputElement = document.getElementById('command-output');
+
+    commandButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            
+            const commandName = this.dataset.commandName;
+            const originalButtonHtml = this.innerHTML;
+
+            // Set button to loading state
+            this.classList.add('disabled');
+            this.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <strong>Ejecutando...</strong>
+                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                </div>`;
+            
+            outputElement.textContent = `Ejecutando '${commandName}'...`;
+
+            fetch("{{ url_for('local_execution.run_command') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: commandName }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    outputElement.textContent = `Error:\n\n${data.error}`;
+                } else {
+                    outputElement.textContent = data.output;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                outputElement.textContent = 'Error: No se pudo conectar con el servidor para ejecutar el comando.';
+            })
+            .finally(() => {
+                // Restore button state
+                this.classList.remove('disabled');
+                this.innerHTML = originalButtonHtml;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+

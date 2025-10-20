@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles de Ejecución - AGP Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Detalles de Ejecución de Playbook</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Información General
+        </div>
+        <div class="card-body">
+            <p><strong>ID Ejecución:</strong> {{ execution.id }}</p>
+            <p><strong>Playbook ID:</strong> {{ execution.playbook_id }}</p>
+            <p><strong>Agente ID:</strong> {{ execution.agent_id }}</p>
+            <p><strong>Inicio:</strong> {{ execution.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            <p><strong>Fin:</strong> {{ execution.end_time.strftime('%Y-%m-%d %H:%M:%S') if execution.end_time else 'En curso' }}</p>
+            <p><strong>Estado:</strong> 
+                {% if execution.status == 'completed' %}
+                    <span class="badge bg-success">Completado</span>
+                {% elif execution.status == 'failed' %}
+                    <span class="badge bg-danger">Fallido</span>
+                {% else %}
+                    <span class="badge bg-info">En Curso</span>
+                {% endif %}
+            </p>
+            <p><strong>Snapshot del Playbook:</strong></p>
+            <pre><code class="language-json">{{ execution.playbook_data_snapshot | tojson(indent=2) }}</code></pre>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Logs de Ejecución
+        </div>
+        <div class="card-body">
+            {% if logs %}
+            <ul class="list-group">
+                {% for log in logs %}
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">
+                            <span class="text-muted">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+                            {% if log.level == 'info' %}
+                                <span class="badge bg-primary">INFO</span>
+                            {% elif log.level == 'warning' %}
+                                <span class="badge bg-warning">WARN</span>
+                            {% elif log.level == 'error' %}
+                                <span class="badge bg-danger">ERROR</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ log.level.upper() }}</span>
+                            {% endif %}
+                            {% if log.step_id %}
+                                <span class="badge bg-light text-dark">Paso: {{ log.step_id }}</span>
+                            {% endif %}
+                        </div>
+                        {{ log.message }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No hay logs para esta ejecución.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{{ url_for('agents.playbook_executions') }}" class="btn btn-secondary mt-4">Volver a Ejecuciones</a>
+</div>
+{% endblock %}

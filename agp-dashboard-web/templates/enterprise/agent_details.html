@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Agente: {{ agent.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">{{ agent.name }}</h1>
+            <p class="text-muted mb-0"><code>{{ agent.agent_id }}</code></p>
+        </div>
+        <span class="badge rounded-pill {% if agent.is_online %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 1rem;">
+            {% if agent.is_online %}Online{% else %}Offline{% endif %}
+        </span>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Ejecutar Comando Remoto</h6>
+                </div>
+                <div class="card-body">
+                    <form id="commandForm">
+                        <div class="mb-3">
+                            <label for="commandInput" class="form-label">Comando a ejecutar:</label>
+                            <input type="text" class="form-control" id="commandInput" placeholder="Ej: ls -l /data/data/com.termux/files/home" {% if not agent.is_online %}disabled{% endif %}>
+                        </div>
+                        <button type="submit" class="btn btn-primary" {% if not agent.is_online %}disabled{% endif %}>Enviar Comando</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Salida del Comando</h6>
+                </div>
+                <div class="card-body">
+                    <pre id="commandOutput" class="bg-dark text-white p-3 rounded" style="min-height: 150px; max-height: 400px; overflow-y: auto;">Esperando comando...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="{{ url_for('enterprise.list_agents') }}" class="btn btn-secondary">Volver a la lista de agentes</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const agentId = "{{ agent.agent_id }}";
+    const commandForm = document.getElementById('commandForm');
+    const commandInput = document.getElementById('commandInput');
+    const commandOutput = document.getElementById('commandOutput');
+    
+    const agentSocket = io("/agent");
+
+    agentSocket.on('connect', function() {
+        console.log(`Connected to /agent namespace for agent ${agentId}`);
+    });
+
+    commandForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const command = commandInput.value.trim();
+        if (!command) return;
+
+        commandOutput.textContent = `Enviando comando: ${command}...`;
+        const taskId = `cmd_${agentId}_${Date.now()}`;
+
+        console.log(`Emitting server_command for agent ${agentId}`)
+        // Este es el evento que el backend (agent_api.py) debe escuchar
+        agentSocket.emit('server_command', {
+            agent_id: agentId,
+            task_id: taskId,
+            command: command.split(' ') // Dividir el comando en partes
+        });
+    });
+
+    // Escuchar por la respuesta del comando
+    agentSocket.on('command_result', function(data) {
+        console.log("Received command result:", data);
+        // Actualizar la UI con el resultado
+        commandOutput.textContent = data.output || "El comando no produjo salida.";
+        if (data.status === 'failed') {
+            commandOutput.textContent += `\n--- ERROR ---\n${data.error}`;
+        }
+    });
+
+    // También escuchar por actualizaciones de estado generales
+    agentSocket.on('agent_status_update', function(data) {
+        if (data.agent_id === agentId) {
+            window.location.reload(); // Recargar la página si el estado del agente cambia
+        }
+    });
+});
+</script>
+{% endblock %}

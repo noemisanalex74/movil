@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Estado del Sistema - AGP Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Estado del Sistema</h1>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Componente</th>
+                <th>Estado</th>
+                <th>Detalles</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for check in status_checks %}
+            <tr>
+                <td>{{ check.item }}</td>
+                <td>
+                    {% if '✅' in check.status %}
+                        <span class="badge bg-success">{{ check.status }}</span>
+                    {% elif '❌' in check.status %}
+                        <span class="badge bg-danger">{{ check.status }}</span>
+                    {% else %}
+                        {{ check.status }}
+                    {% endif %}
+                </td>
+                <td>{{ check.details }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

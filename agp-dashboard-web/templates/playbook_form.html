@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">{{ title }}</h1>
+
+    <div class="card">
+        <div class="card-header">
+            Detalles del Playbook
+        </div>
+        <div class="card-body">
+            <form method="POST" id="playbook-form">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Nombre del Playbook:</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ playbook.name }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Descripción:</label>
+                    <textarea class="form-control" id="description" name="description" rows="3">{{ playbook.description }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="target_agent_id" class="form-label">ID del Agente Destino:</label>
+                    <input type="text" class="form-control" id="target_agent_id" name="target_agent_id" value="{{ playbook.target_agent_id }}" placeholder="Ej: agent_12345">
+                </div>
+
+                <hr>
+
+                <!-- Step Builder UI -->
+                <h5 class="mb-3">Constructor de Pasos</h5>
+                <div id="steps-container"></div>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addStep('command')"><i class="bi bi-terminal-plus"></i> Añadir Comando</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addStep('upload')"><i class="bi bi-upload"></i> Añadir Subida de Archivo</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="addStep('download')"><i class="bi bi-download"></i> Añadir Descarga de Archivo</button>
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="addStep('mcp')"><i class="bi bi-tools"></i> Añadir Ejecución de MCP</button>
+                </div>
+                <!-- Hidden input to hold the final JSON -->
+                <input type="hidden" name="steps_json" id="steps_json_hidden">
+
+                <hr>
+
+                <div class="mb-3">
+                    <label for="variables_json" class="form-label">Variables del Playbook (JSON):</label>
+                    <textarea class="form-control" id="variables_json" name="variables_json" rows="5">{{ playbook.variables_json }}</textarea>
+                    <small class="form-text text-muted">Define las variables del playbook en formato JSON. Ejemplo: {"user": "admin", "path": "/tmp"}</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Guardar Playbook</button>
+                <a href="{{ url_for('playbooks_manager') }}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- CodeMirror CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/lint/lint.min.css">
+
+<!-- CodeMirror JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/lint/lint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/lint/json-lint.min.js"></script>
+<script src="https://unpkg.com/jsonlint@1.6.3/web/jsonlint.js"></script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize CodeMirror for the variables JSON textarea
+        const variablesTextarea = document.getElementById('variables_json');
+        const editor = CodeMirror.fromTextArea(variablesTextarea, {
+            lineNumbers: true,
+            mode: { name: "javascript", json: true },
+            theme: "dracula",
+            autoCloseBrackets: true,
+            gutters: ["CodeMirror-lint-markers"],
+            lint: true
+        });
+
+        // Ensure the textarea is updated before form submission
+        editor.on('change', () => {
+            editor.save();
+        });
+    });
+
+    let stepCounter = 0;
+
+    function addStep(type, data = {}) {
+        const container = document.getElementById('steps-container');
+        const stepId = `step-${stepCounter++}`;
+        let stepHtml = '';
+
+        const description = data.description || '';
+
+        switch (type) {
+            case 'command':
+                stepHtml = `
+                    <div class="card mb-3 step-card" data-step-type="command">
+                        <div class="card-body">
+                            <h6 class="card-title">Paso: Ejecutar Comando</h6>
+                            <div class="mb-3">
+                                <label for="${stepId}-command" class="form-label">Comando:</label>
+                                <input type="text" class="form-control" id="${stepId}-command" value="${data.command || ''}" placeholder="Ej: ls -l /tmp">
+                            </div>
+                            <div class="mb-3">
+                                <label for="${stepId}-desc" class="form-label">Descripción:</label>
+                                <input type="text" class="form-control" id="${stepId}-desc" value="${description}" placeholder="Ej: Listar archivos en temporal">
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.step-card').remove()">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'upload':
+                stepHtml = `
+                    <div class="card mb-3 step-card" data-step-type="file_transfer">
+                        <input type="hidden" class="step-direction" value="upload">
+                        <div class="card-body">
+                            <h6 class="card-title">Paso: Subir Archivo</h6>
+                            <div class="mb-3">
+                                <label for="${stepId}-local" class="form-label">Ruta Local (Dashboard):</label>
+                                <input type="text" class="form-control" id="${stepId}-local" value="${data.local_path || ''}" placeholder="/ruta/en/el/dashboard/archivo.txt">
+                            </div>
+                            <div class="mb-3">
+                                <label for="${stepId}-remote" class="form-label">Ruta Remota (Agente):</label>
+                                <input type="text" class="form-control" id="${stepId}-remote" value="${data.remote_path || ''}" placeholder="/ruta/en/el/agente/archivo.txt">
+                            </div>
+                            <div class="mb-3">
+                                <label for="${stepId}-desc" class="form-label">Descripción:</label>
+                                <input type="text" class="form-control" id="${stepId}-desc" value="${description}" placeholder="Ej: Subir fichero de configuración">
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.step-card').remove()">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'download':
+                 stepHtml = `
+                    <div class="card mb-3 step-card" data-step-type="file_transfer">
+                        <input type="hidden" class="step-direction" value="download">
+                        <div class="card-body">
+                            <h6 class="card-title">Paso: Descargar Archivo</h6>
+                            <div class="mb-3">
+                                <label for="${stepId}-remote" class="form-label">Ruta Remota (Agente):</label>
+                                <input type="text" class="form-control" id="${stepId}-remote" value="${data.remote_path || ''}" placeholder="/ruta/en/el/agente/log.txt">
+                            </div>
+                             <div class="mb-3">
+                                <label for="${stepId}-local" class="form-label">Ruta Local (Dashboard):</label>
+                                <input type="text" class="form-control" id="${stepId}-local" value="${data.local_path || ''}" placeholder="/ruta/en/el/dashboard/descargas/">
+                            </div>
+                            <div class="mb-3">
+                                <label for="${stepId}-desc" class="form-label">Descripción:</label>
+                                <input type="text" class="form-control" id="${stepId}-desc" value="${description}" placeholder="Ej: Descargar log de la aplicación">
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.step-card').remove()">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'mcp':
+                stepHtml = `
+                    <div class="card mb-3 step-card" data-step-type="mcp_execution">
+                        <div class="card-body">
+                            <h6 class="card-title">Paso: Ejecutar MCP</h6>
+                            <div class="mb-3">
+                                <label for="${stepId}-mcp-name" class="form-label">Nombre del MCP:</label>
+                                <input type="text" class="form-control" id="${stepId}-mcp-name" value="${data.mcp_name || ''}" placeholder="ejemplo_mcp.py">
+                            </div>
+                            <div class="mb-3">
+                                <label for="${stepId}-mcp-args" class="form-label">Argumentos:</label>
+                                <input type="text" class="form-control" id="${stepId}-mcp-args" value="${data.mcp_args || ''}" placeholder="--parametro valor">
+                            </div>
+                            <div class="mb-3">
+                                <label for="${stepId}-desc" class="form-label">Descripción:</label>
+                                <input type="text" class="form-control" id="${stepId}-desc" value="${description}" placeholder="Ej: Ejecutar tarea de limpieza">
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.step-card').remove()">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                break;
+        }
+        container.insertAdjacentHTML('beforeend', stepHtml);
+    }
+
+    function buildStepsJson() {
+        const steps = [];
+        document.querySelectorAll('#steps-container .step-card').forEach(card => {
+            const type = card.dataset.stepType;
+            const step = { type: type };
+            step.description = card.querySelector('[id$="-desc"]').value;
+
+            if (type === 'command') {
+                step.command = card.querySelector('[id$="-command"]').value;
+            } else if (type === 'file_transfer') {
+                step.direction = card.querySelector('.step-direction').value;
+                step.local_path = card.querySelector('[id$="-local"]').value;
+                step.remote_path = card.querySelector('[id$="-remote"]').value;
+            } else if (type === 'mcp_execution') {
+                step.mcp_name = card.querySelector('[id$="-mcp-name"]').value;
+                step.mcp_args = card.querySelector('[id$="-mcp-args"]').value;
+            }
+            steps.push(step);
+        });
+        return JSON.stringify(steps, null, 4);
+    }
+
+    document.getElementById('playbook-form').addEventListener('submit', function(e) {
+        const hiddenInput = document.getElementById('steps_json_hidden');
+        hiddenInput.value = buildStepsJson();
+    });
+
+    // If editing, populate existing steps
+    const existingStepsJson = {{ playbook.steps_json | tojson | safe }};
+    if (existingStepsJson) {
+        try {
+            const existingSteps = JSON.parse(existingStepsJson);
+            if (Array.isArray(existingSteps)) {
+                existingSteps.forEach(step => {
+                    let type = step.type;
+                    // Handle file_transfer as a special case for the UI
+                    if (type === 'file_transfer') {
+                        type = step.direction; // 'upload' or 'download'
+                    }
+                    addStep(type, step);
+                });
+            }
+        } catch (e) {
+            console.error("Error parsing existing steps JSON:", e);
+            alert("Error al cargar los pasos existentes. El JSON podría estar corrupto.");
+        }
+    }
+
+</script>
+{% endblock %}

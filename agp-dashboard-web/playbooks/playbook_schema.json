@@ -1,0 +1,101 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Playbook Schema",
+    "description": "Schema for AGP Enterprise Agent Playbooks",
+    "type": "object",
+    "required": ["playbook_id", "name", "steps"],
+    "properties": {
+        "playbook_id": {
+            "type": "string",
+            "description": "Unique identifier for the playbook"
+        },
+        "name": {
+            "type": "string",
+            "description": "Human-readable name of the playbook"
+        },
+        "description": {
+            "type": "string",
+            "description": "Brief description of what the playbook does",
+            "default": ""
+        },
+        "variables": {
+            "type": "object",
+            "description": "Key-value pairs for playbook variables",
+            "patternProperties": {
+                "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "type": ["string", "number", "boolean", "array", "object"],
+                    "description": "Value of the variable"
+                }
+            },
+            "additionalProperties": false
+        },
+        "steps": {
+            "type": "array",
+            "description": "List of steps to be executed in the playbook",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["step_id", "action", "parameters"],
+                "properties": {
+                    "step_id": {
+                        "type": "string",
+                        "description": "Unique identifier for the step"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Human-readable name of the step",
+                        "default": ""
+                    },
+                    "action": {
+                        "type": "string",
+                        "description": "The action to perform",
+                        "enum": ["run_command", "read_file", "write_file", "delete_file"]
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "description": "Parameters for the action",
+                        "properties": {
+                            "command": {
+                                "type": ["string", "array"],
+                                "items": {"type": "string"},
+                                "description": "Command to execute (for run_command)"
+                            },
+                            "command_type": {
+                                "type": "string",
+                                "enum": ["shell", "python"],
+                                "default": "shell",
+                                "description": "Type of command (for run_command)"
+                            },
+                            "timeout": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "default": 60,
+                                "description": "Timeout for command execution in seconds"
+                            },
+                            "file_path": {
+                                "type": "string",
+                                "description": "Path to the file (for read_file, write_file, delete_file)"
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "Base64 encoded content (for write_file)"
+                            }
+                        },
+                        "required": [],
+                        "additionalProperties": true
+                    },
+                    "on_success": {
+                        "type": "string",
+                        "description": "ID of the next step on success, or 'end'"
+                    },
+                    "on_failure": {
+                        "type": "string",
+                        "description": "ID of the next step on failure, or 'end'"
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    },
+    "additionalProperties": false
+}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ _('Gestión de Agentes') }}</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            {% if current_user.is_admin %}
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addAgentModal">
+                <i class="fas fa-plus-circle me-1"></i>
+                {{ _('Añadir Agente') }}
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Agents Table -->
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">{{ _('ID') }}</th>
+                    <th scope="col">{{ _('Nombre') }}</th>
+                    <th scope="col">{{ _('Descripción') }}</th>
+                    <th scope="col">{{ _('Dirección') }}</th>
+                    <th scope="col">{{ _('Estado') }}</th>
+                    <th scope="col" class="text-end">{{ _('Acciones') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for agent in agents %}
+                <tr>
+                    <td><code>{{ agent.id }}</code></td>
+                    <td>{{ agent.name }}</td>
+                    <td>{{ agent.description }}</td>
+                    <td><code>{{ agent.address }}</code></td>
+                    <td>
+                        {% if agent.status == 'online' %}
+                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>{{ _('Online') }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-times-circle me-1"></i>{{ _('Offline') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if current_user.is_admin %}
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-form-action="{{ url_for('agents.delete_agent', agent_id=agent.id) }}" data-item-name="{{ agent.name }}">
+                            <i class="fas fa-trash-alt"></i> {{ _('Eliminar') }}
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center fst-italic py-4">{{ _('No hay agentes registrados.') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Agent Modal -->
+<div class="modal fade" id="addAgentModal" tabindex="-1" aria-labelledby="addAgentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('agents.add_agent') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addAgentModalLabel">{{ _('Añadir Nuevo Agente') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Cerrar') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">{{ _('Nombre del Agente') }}</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="{{ _('Ej: Servidor de Producción') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">{{ _('Descripción') }}</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="{{ _('Ej: Servidor principal de la base de datos') }}"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="address" class="form-label">{{ _('Dirección (IP o Hostname)') }}</label>
+                        <input type="text" class="form-control" id="address" name="address" placeholder="{{ _('Ej: 192.168.1.100') }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancelar') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('Guardar Agente') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

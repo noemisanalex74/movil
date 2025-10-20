@@ -5,23 +5,129 @@
 {% block content %}
 <h1 class="mb-4">{{ title }}</h1>
 
-<form method="POST">
+<form id="task-form">
     <div class="mb-3">
         <label for="descripcion" class="form-label">Descripción de la Tarea:</label>
-        <input type="text" id="descripcion" name="descripcion" value="{{ task.descripcion }}" class="form-control" placeholder="Describe la tarea" required>
+        <input type="text" id="descripcion" name="descripcion" class="form-control" placeholder="Describe la tarea" required>
     </div>
 
     <div class="mb-3">
         <label for="estado" class="form-label">Estado:</label>
         <select id="estado" name="estado" class="form-select">
-            <option value="pendiente" {% if task.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
-            <option value="en_progreso" {% if task.estado == 'en_progreso' %}selected{% endif %}>En Progreso</option>
-            <option value="completada" {% if task.estado == 'completada' %}selected{% endif %}>Completada</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="en_progreso">En Progreso</option>
+            <option value="completada">Completada</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="proyecto" class="form-label">Proyecto:</label>
+        <select id="proyecto" name="proyecto" class="form-select">
+            <option value="">Sin Proyecto</option>
+            <!-- Los proyectos se cargarán dinámicamente con JS -->
         </select>
     </div>
 
     <button type="submit" class="btn btn-primary">Guardar</button>
 </form>
 
-<a href="{{ url_for('tasks_manager') }}" class="btn btn-secondary mt-3">Volver a la Gestión de Tareas</a>
+<a href="{{ url_for('tasks.tasks_manager') }}" class="btn btn-secondary mt-3">Volver a la Gestión de Tareas</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const form = document.getElementById('task-form');
+        const descripcionInput = document.getElementById('descripcion');
+        const estadoSelect = document.getElementById('estado');
+        const proyectoSelect = document.getElementById('proyecto');
+
+        // Extraer task_id de la URL si estamos en modo edición
+        const pathSegments = window.location.pathname.split('/');
+        const task_id = pathSegments[pathSegments.length - 1];
+        const isEditMode = pathSegments[pathSegments.length - 2] === 'task_edit';
+
+        // Cargar proyectos dinámicamente
+        async function loadProjects() {
+            try {
+                const response = await fetch("/api/projects");
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                const projects = data.projects;
+
+                proyectoSelect.innerHTML = '<option value="">Sin Proyecto</option>';
+                projects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.nombre;
+                    option.textContent = project.nombre;
+                    proyectoSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error al cargar proyectos:', error);
+                alert('Error al cargar la lista de proyectos.');
+            }
+        }
+
+        await loadProjects(); // Cargar proyectos al inicio
+
+        if (isEditMode) {
+            // Cargar datos de la tarea para edición
+            try {
+                const response = await fetch(`/api/tasks/${task_id}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const task = await response.json();
+                descripcionInput.value = task.descripcion;
+                estadoSelect.value = task.estado;
+                proyectoSelect.value = task.proyecto || ''; // Seleccionar el proyecto si existe
+            } catch (error) {
+                console.error('Error al cargar la tarea para edición:', error);
+                alert('Error al cargar la tarea.');
+            }
+        }
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const taskData = {
+                descripcion: descripcionInput.value,
+                estado: estadoSelect.value,
+                proyecto: proyectoSelect.value || null // Enviar null si no hay proyecto seleccionado
+            };
+
+            let url = '/api/tasks';
+            let method = 'POST';
+
+            if (isEditMode) {
+                url = `/api/tasks/${task_id}`;
+                method = 'PUT';
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(taskData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(isEditMode ? 'Tarea actualizada correctamente.' : 'Tarea añadida correctamente.');
+                    window.location.href = "{{ url_for('tasks.tasks_manager') }}";
+                } else {
+                    alert('Error: ' + (result.message || 'Ocurrió un error.'));
+                }
+            } catch (error) {
+                console.error('Error al guardar la tarea:', error);
+                alert('Error de comunicación con el servidor.');
+            }
+        });
+    });
+</script>
 {% endblock %}

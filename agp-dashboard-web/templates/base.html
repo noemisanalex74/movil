@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AGP Dashboard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.4">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <!-- 3D Model & AR Viewer -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+    <!-- Network Graph Visualization -->
+    <script type="text/javascript" src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+    <link href="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.css" rel="stylesheet" type="text/css" />
+
+    <!-- 3D Background Libraries (Temporarily commented out for debugging) -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.2/vanilla-tilt.min.js"></script> -->
+</head>
+<body>
+    <div id="global-loader" class="d-flex justify-content-center align-items-center" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: none;">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+    <div id="preloader">
+        <div class="spinner"></div>
+    </div>
+    <div id="scanline-overlay"></div>
+    <!-- <div id="stars"></div> -->
+    <!-- <div id="vanta-bg"></div> -->
+    <!-- <div id="shooting-stars-container"></div> -->
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1150;">
+        <!-- Toasts will be appended here -->
+    </div>
+
+    <nav class="navbar navbar-expand-lg shadow-sm" id="main-navbar">
+        <div class="container-fluid">
+            <button class="btn btn-outline-secondary me-2" type="button" id="sidebar-toggle">
+                <i class="bi bi-list"></i>
+            </button>
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">AGP Dashboard</a>
+
+            <div class="mx-auto w-50">
+                <form action="{{ url_for('search') }}" method="GET" class="d-flex">
+                    <input class="form-control me-2" type="search" name="q" id="main-search-input" placeholder="Buscar tareas, proyectos, agentes..." aria-label="Search">
+                    <button class="btn btn-outline-secondary me-2" type="button" id="voice-search-btn" title="Búsqueda por voz">
+                        <i class="bi bi-mic-fill"></i>
+                    </button>
+                    <button class="btn btn-outline-primary" type="submit">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
+                            <style>
+                                .search-icon-circle { stroke: currentColor; stroke-width: 2.5; transition: all 0.3s ease-in-out; }
+                                .search-icon-handle { stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; transition: all 0.3s ease-in-out; }
+                                .search-icon-svg:hover .search-icon-circle { transform: scale(0.8) translate(2px, -2px); }
+                                .search-icon-svg:hover .search-icon-handle { transform: translate(2px, -2px); }
+                            </style>
+                            <g class="search-icon-svg">
+                                <circle class="search-icon-circle" cx="11" cy="11" r="7" />
+                                <line class="search-icon-handle" x1="16" y1="16" x2="20" y2="20" />
+                            </g>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="ms-auto d-flex align-items-center">
+                <a href="{{ url_for('spatial_dashboard') }}" class="nav-link me-3" title="Vista 3D">
+                    <i class="bi bi-boxes" style="font-size: 1.2rem;"></i>
+                </a>
+                <div id="battery-widget" class="nav-link me-3 d-none" title="Estado de la Batería del Teléfono">
+                    <i id="battery-icon" class="bi bi-battery-half"></i>
+                    <span id="battery-percentage">--%</span>
+                </div>
+
+                <!-- Notifications Dropdown -->
+                <div class="nav-item dropdown">
+                    <a class="nav-link" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-bell-fill"></i>
+                        <span id="notification-count" class="badge rounded-pill bg-danger" style="position: absolute; top: 10px; right: -5px; font-size: 0.6em; display: none;"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" id="notification-list">
+                        <li><a class="dropdown-item text-muted text-center" href="#">No hay notificaciones nuevas</a></li>
+                    </ul>
+                </div>
+                <!-- Future user-related items here -->
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-wrapper">
+        <nav id="sidebar" class="d-flex flex-column flex-shrink-0 p-3">
+            <ul class="nav nav-pills flex-column mb-auto pt-3">
+                {% for item in main_menu %}
+                    {% if item.type == 'link' %}
+                        <li class="nav-item">
+                            <a href="{{ url_for(item.url) }}" class="nav-link"><i class="bi {{ item.icon }}"></i><span>{{ item.name }}</span></a>
+                        </li>
+                    {% elif item.type == 'submenu' %}
+                        <li class="nav-item">
+                            <a href="#{{ item.id }}" data-bs-toggle="collapse" class="nav-link collapsed">
+                                <i class="bi {{ item.icon }}"></i><span>{{ item.name }}</span><i class="bi bi-chevron-down float-end"></i>
+                            </a>
+                            <ul id="{{ item.id }}" class="collapse nav flex-column ms-4">
+                                {% for sub_item in item['items'] %}
+                                    <li>
+                                        <a href="{% if sub_item.external %}{{ sub_item.url }}{% else %}{{ url_for(sub_item.url) }}{% endif %}" 
+                                           class="nav-link" 
+                                           {% if sub_item.external %}target="_blank"{% endif %}>
+                                            <i class="bi {{ sub_item.icon }}"></i><span>{{ sub_item.name }}</span>
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <main id="content">
+            <div id="flash-messages" style="display: none;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash-message" data-category="{{ category }}" data-message="{{ message }}"></div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            </div>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.0.0/dist/socket.io.min.js"></script>
+    {% block scripts %}{% endblock %}
+    <script>
+        function showGlobalLoader() {
+            document.getElementById('global-loader').style.display = 'flex';
+        }
+
+        function hideGlobalLoader() {
+            document.getElementById('global-loader').style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Preloader Logic ---
+            const preloader = document.getElementById('preloader');
+
+            if (preloader) {
+                window.addEventListener('load', function() {
+                    preloader.style.display = 'none';
+                });
+            }
+
+            function showPreloader() {
+                if (preloader) {
+                    preloader.style.display = 'flex';
+                }
+            }
+
+            function hidePreloader() {
+                if (preloader) {
+                    preloader.style.display = 'none';
+                }
+            }
+
+            document.body.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && link.href && link.hostname === window.location.hostname && !link.href.includes('#') && link.target !== '_blank' && !link.getAttribute('data-bs-toggle')) {
+                    // Don't show preloader for smooth page transitions, as it has its own animation
+                    // showPreloader();
+                }
+            });
+            // --- Voice Search ---
+            const voiceSearchBtn = document.getElementById('voice-search-btn');
+            const searchInput = document.getElementById('main-search-input');
+            if (voiceSearchBtn && searchInput) {
+                const searchForm = searchInput.closest('form');
+                voiceSearchBtn.addEventListener('click', async () => {
+                    const originalPlaceholder = searchInput.placeholder;
+                    searchInput.placeholder = 'Escuchando...';
+                    voiceSearchBtn.disabled = true;
+                    try {
+                        const response = await fetch("{{ url_for('local_execution.speech_to_text') }}", { method: 'POST' });
+                        const data = await response.json();
+                        if (response.ok && data.text) {
+                            searchInput.value = data.text;
+                            if (searchForm) searchForm.submit();
+                        } else {
+                            showToast('Error de Voz', data.error || 'No se reconoció texto.', 'danger');
+                            searchInput.placeholder = originalPlaceholder;
+                        }
+                    } catch (error) {
+                        showToast('Error de API', 'No se pudo contactar con la API de voz.', 'danger');
+                        searchInput.placeholder = originalPlaceholder;
+                    } finally {
+                        voiceSearchBtn.disabled = false;
+                    }
+                });
+            }
+
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const body = document.body;
+
+            // Ensure dark mode is applied by default
+            // body.classList.add('dark-mode'); // This is handled by the theme changer below
+
+            // --- Color Theme Changer ---
+            const themeChangerLinks = document.querySelectorAll('[data-theme]');
+            const bodyEl = document.body;
+
+            function applyColorTheme(themeName) {
+                bodyEl.classList.remove('theme-dark', 'theme-synthwave', 'theme-matrix');
+                bodyEl.classList.add(themeName);
+                localStorage.setItem('colorTheme', themeName);
+            }
+
+            themeChangerLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const themeName = this.getAttribute('data-theme');
+                    applyColorTheme(themeName);
+                });
+            });
+
+            const savedColorTheme = localStorage.getItem('colorTheme') || 'theme-universe';
+            applyColorTheme(savedColorTheme);
+
+
+            // --- Sidebar Management ---
+            function applySidebarState(state) {
+                if (window.innerWidth <= 768) { // Mobile view
+                    if (state === 'expanded') {
+                        sidebar.classList.remove('collapsed');
+                    } else {
+                        sidebar.classList.add('collapsed');
+                    }
+                } else { // Desktop view
+                    if (state === 'collapsed') {
+                        sidebar.classList.add('collapsed');
+                        content.classList.add('sidebar-collapsed');
+                    } else {
+                        sidebar.classList.remove('collapsed');
+                        content.classList.remove('sidebar-collapsed');
+                    }
+                }
+            }
+
+            sidebarToggle.addEventListener('click', function() {
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                const newState = isCollapsed ? 'expanded' : 'collapsed';
+                localStorage.setItem('sidebarState', newState);
+                applySidebarState(newState);
+            });
+
+            const savedSidebarState = localStorage.getItem('sidebarState') || (window.innerWidth > 768 ? 'expanded' : 'collapsed');
+            applySidebarState(savedSidebarState);
+            
+            window.addEventListener('resize', () => {
+                const currentState = localStorage.getItem('sidebarState') || 'expanded';
+                applySidebarState(currentState);
+            });
+
+
+            // --- Active Link & Submenu Highlighting ---
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('#sidebar .nav-link');
+
+            navLinks.forEach(link => {
+                const linkPath = link.getAttribute('href');
+                let isActive = false;
+
+                // Handle homepage case
+                if (currentPath === linkPath && (currentPath === "{{ url_for('dashboard') }}" || currentPath === '/')) {
+                    isActive = true;
+                } 
+                // Handle other pages, ensuring it's not just '/'
+                else if (linkPath !== '/' && linkPath !== '#' && currentPath.startsWith(linkPath)) {
+                    isActive = true;
+                }
+
+                if (isActive) {
+                    link.classList.add('active');
+                    
+                    // Find the closest parent submenu and expand it
+                    const parentSubmenu = link.closest('.collapse');
+                    if (parentSubmenu) {
+                        parentSubmenu.classList.add('show');
+                        
+                        // Find the trigger for this submenu and mark it as not collapsed
+                        const trigger = document.querySelector(`a[href="#${parentSubmenu.id}"]`);
+                        if (trigger) {
+                            trigger.classList.remove('collapsed');
+                            trigger.setAttribute('aria-expanded', 'true');
+                        }
+                    }
+                }
+            });
+
+            // --- Auto-collapse sidebar on mobile click ---
+            document.querySelectorAll('#sidebar .nav-link').forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        localStorage.setItem('sidebarState', 'collapsed');
+                        applySidebarState('collapsed');
+                    }
+                });
+            });
+
+            // --- SocketIO for real-time notifications ---
+            try {
+                const socket = io();
+                socket.on('connect', () => { console.log('Socket.IO connected'); });
+                socket.on('disconnect', () => { console.log('Socket.IO disconnected'); });
+
+                socket.on('playbook_run_status', function(data) {
+                    showToast(`Playbook: ${data.playbook_name}`, data.message, data.status === 'completed' ? 'success' : 'danger');
+                });
+
+                socket.on('playbook_step_status', function(data) {
+                    const type = data.status === 'failed' ? 'danger' : 'info';
+                    showToast(`Paso: ${data.type}`, data.message, type);
+                });
+
+                // --- Real-time User Notifications ---
+                if (socket) {
+                    // Join a room for this specific user
+                    socket.on('connect', function() {
+                        console.log('Socket.IO connected!');
+                        {% if current_user.is_authenticated %}
+                        socket.emit('join_room', {'room': 'user_{{ current_user.id }}'});
+                        {% endif %}
+                    });
+
+                    socket.on('new_notification', function(notification) {
+                        console.log('New notification received:', notification);
+                        updateNotificationUI(notification);
+                        
+                        const message = notification.message.toLowerCase();
+                        if (message.includes('error') || message.includes('failed') || message.includes('falló')) {
+                            flashVantaColor(0xf7768e); // Flash red for errors
+                            showToast('Error', notification.message, 'danger');
+                        } else {
+                            showToast('Nueva Notificación', notification.message, 'info');
+                        }
+                    });
+                }
+
+                function updateNotificationUI(notification) {
+                    const countElement = document.getElementById('notification-count');
+                    const listElement = document.getElementById('notification-list');
+                    
+                    // Increment count
+                    let currentCount = parseInt(countElement.textContent || '0');
+                    currentCount++;
+                    countElement.textContent = currentCount;
+                    countElement.style.display = 'block';
+
+                    // Remove placeholder if it exists
+                    const placeholder = listElement.querySelector('.text-muted');
+                    if (placeholder) {
+                        placeholder.remove();
+                    }
+
+                    // Add new notification to the top of the list
+                    const newNotificationItem = document.createElement('li');
+                    newNotificationItem.innerHTML = `<a class="dropdown-item" href="${notification.url || '#'}">${notification.message}</a>`;
+                    listElement.prepend(newNotificationItem);
+                }
+
+                // Fetch unread notifications on page load
+                {% if current_user.is_authenticated %}
+                fetch("{{ url_for('notifications.get_unread_notifications') }}")
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            data.forEach(notification => updateNotificationUI(notification));
+                        }
+                    });
+                {% endif %}
+
+            } catch (e) {
+                console.error('Socket.IO connection failed:', e);
+            }
+
+            function showToast(title, message, type) {
+                const toastContainer = document.querySelector('.toast-container');
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+                    <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <strong>${title}</strong><br>${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+                toastElement.addEventListener('hidden.bs.toast', () => {
+                    toastElement.remove();
+                });
+            }
+
+            // --- PWA Service Worker Registration ---
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
+                        .then(registration => {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        })
+                        .catch(err => {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
+                });
+            }
+
+            // --- Battery Widget Logic ---
+            const agentSocket = io("/agent");
+            const batteryWidget = document.getElementById('battery-widget');
+            const batteryIcon = document.getElementById('battery-icon');
+            const batteryPercentage = document.getElementById('battery-percentage');
+
+            agentSocket.on('agent_battery_update', function(data) {
+                console.log("Received battery update:", data);
+                if (batteryWidget && data.battery) {
+                    const battery = data.battery;
+                    const percentage = battery.percentage;
+
+                    batteryWidget.classList.remove('d-none'); // Make widget visible
+                    batteryPercentage.textContent = `${percentage}%`;
+
+                    // Update icon and color
+                    batteryIcon.classList.remove('bi-battery-full', 'bi-battery-half', 'bi-battery', 'bi-battery-charging', 'text-success', 'text-warning', 'text-danger');
+
+                    if (battery.status === 'CHARGING') {
+                        batteryIcon.classList.add('bi-battery-charging', 'text-success');
+                    } else {
+                        if (percentage > 80) {
+                            batteryIcon.classList.add('bi-battery-full', 'text-success');
+                        } else if (percentage > 30) {
+                            batteryIcon.classList.add('bi-battery-half', 'text-warning');
+                        } else {
+                            batteryIcon.classList.add('bi-battery', 'text-danger');
+                        }
+                    }
+                }
+            });
+
+            // --- Notification Center Logic ---
+            const notificationSocket = io(); // Main namespace
+            const notificationCount = document.getElementById('notification-count');
+            const notificationList = document.getElementById('notification-list');
+
+            function addNotification(notification) {
+                // Remove placeholder if it exists
+                const placeholder = notificationList.querySelector('.placeholder');
+                if (placeholder) placeholder.remove();
+
+                const newNotif = document.createElement('li');
+                newNotif.innerHTML = `
+                    <a class="dropdown-item" href="${notification.url || '#'}">
+                        <div>${notification.message}</div>
+                        <small class="text-muted">${new Date(notification.timestamp).toLocaleString()}</small>
+                    </a>`;
+                notificationList.prepend(newNotif);
+                updateNotificationCount(1);
+            }
+
+            function updateNotificationCount(change) {
+                let currentCount = parseInt(notificationCount.textContent || '0');
+                currentCount += change;
+                notificationCount.textContent = currentCount;
+                if (currentCount > 0) {
+                    notificationCount.style.display = 'block';
+                } else {
+                    notificationCount.style.display = 'none';
+                }
+            }
+
+            // Fetch initial unread notifications
+            fetch("{{ url_for('notifications.get_unread_notifications') }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        notificationList.innerHTML = ''; // Clear placeholder
+                        data.forEach(notif => addNotification(notif));
+                    }
+                });
+
+            // Listen for new notifications in real-time
+            notificationSocket.on('new_notification', function(data) {
+                addNotification(data);
+            });
+
+            // Logic to mark as read when dropdown is opened
+            const dropdownElement = document.getElementById('notificationDropdown');
+            dropdownElement.addEventListener('show.bs.dropdown', function () {
+                // Here you could add a POST request to a 'mark_all_read' endpoint
+                // For simplicity, we'll just clear the count visually for now
+                setTimeout(() => { // Timeout to allow dropdown to open
+                    notificationCount.textContent = '0';
+                    notificationCount.style.display = 'none';
+                    // You would then also update the 'is_read' status in the DB
+                    fetch("{{ url_for('notifications.mark_all_as_read') }}", { method: 'POST' });
+                }, 2000);
+            });
+
+            // --- Flash Messages as Toasts ---
+            const flashMessages = document.querySelectorAll('#flash-messages .flash-message');
+            flashMessages.forEach(flash => {
+                const message = flash.dataset.message;
+                let category = flash.dataset.category;
+                let title = 'Notificación';
+
+                if (category === 'success') {
+                    title = 'Éxito';
+                } else if (category === 'danger') {
+                    title = 'Error';
+                } else if (category === 'warning') {
+                    title = 'Atención';
+                } else {
+                    category = 'info'; // Default color
+                }
+
+                showToast(title, message, category);
+            });
+
+            // --- Smooth Page Transitions ---
+            const contentEl = document.getElementById('content');
+            document.body.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+
+                // Check if it's a valid, internal, non-modal link
+                if (link && link.href && link.hostname === window.location.hostname && 
+                    !link.href.includes('#') && link.target !== '_blank' && 
+                    !link.getAttribute('data-bs-toggle')) {
+                    
+                    e.preventDefault();
+                    const destination = link.href;
+
+                    contentEl.classList.add('fade-out');
+
+                    setTimeout(() => {
+                        window.location.href = destination;
+                    }, 200); // Match animation duration
+                }
+            });
+
+            // --- Conversational Assistant Logic ---
+            const assistantModalEl = document.getElementById('assistantModal');
+            const chatBody = document.getElementById('assistant-chat-body');
+            const assistantStatus = document.getElementById('assistant-status');
+
+            const addChatMessage = (message, sender) => {
+                const msgDiv = document.createElement('div');
+                msgDiv.classList.add(`${sender}-message`, 'p-2', 'my-2', 'rounded-3');
+                msgDiv.textContent = message;
+                if (sender === 'user') {
+                    msgDiv.classList.add('bg-primary', 'text-white', 'ms-auto');
+                    msgDiv.style.maxWidth = '75%';
+                } else {
+                    msgDiv.classList.add('bg-light', 'text-dark');
+                    msgDiv.style.maxWidth = '75%';
+                }
+                chatBody.appendChild(msgDiv);
+                chatBody.scrollTop = chatBody.scrollHeight;
+            };
+
+            const setAssistantStatus = (text) => {
+                assistantStatus.innerHTML = `<p class="text-muted w-100 text-center"><em>${text}</em></p>`;
+            };
+
+            const speak = (text) => {
+                fetch("{{ url_for('local_execution.text_to_speech') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+            };
+
+            const listenAndProcess = async () => {
+                setAssistantStatus('Escuchando...');
+                try {
+                    const sttResponse = await fetch("{{ url_for('local_execution.speech_to_text') }}", { method: 'POST' });
+                    const sttResult = await sttResponse.json();
+
+                    if (!sttResponse.ok || !sttResult.text) {
+                        throw new Error(sttResult.error || 'No se reconoció texto.');
+                    }
+
+                    const userText = sttResult.text;
+                    addChatMessage(userText, 'user');
+                    setAssistantStatus('Pensando...');
+
+                    const apiResponse = await fetch("{{ url_for('assistant.process_command') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: userText })
+                    });
+                    const apiResult = await apiResponse.json();
+
+                    addChatMessage(apiResult.response_text, 'assistant');
+                    speak(apiResult.response_text);
+                    setAssistantStatus('Esperando activación...');
+
+                } catch (error) {
+                    const errorMessage = error.toString();
+                    showToast('Error de Asistente', errorMessage, 'danger');
+                    setAssistantStatus('Error. Inténtalo de nuevo.');
+                }
+            };
+
+            assistantModalEl.addEventListener('shown.bs.modal', function() {
+                listenAndProcess();
+            });
+
+            // --- Shooting Stars Logic ---
+            const shootingStarsContainer = document.getElementById('shooting-stars-container');
+
+            function createShootingStar() {
+                const star = document.createElement('div');
+                star.classList.add('shooting-star');
+                shootingStarsContainer.appendChild(star);
+
+                const size = Math.random() * 3 + 1; // 1 to 4px
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+
+                const startX = Math.random() * window.innerWidth;
+                const startY = Math.random() * window.innerHeight * 0.5; // Top half of the screen
+                star.style.left = `${startX}px`;
+                star.style.top = `${startY}px`;
+
+                const duration = Math.random() * 2 + 2; // 2 to 4 seconds
+                star.style.animationDuration = `${duration}s, ${duration}s`;
+                star.style.animationDelay = `0s, ${duration * 0.8}s`; // Fade out starts later
+
+                // Remove star after animation
+                star.addEventListener('animationend', () => {
+                    star.remove();
+                });
+            }
+
+            // Generate stars at random intervals
+            setInterval(createShootingStar, Math.random() * 3000 + 1000); // Every 1 to 4 seconds
+
+            
+        });
+    </script>
+        </body>
+</html>
